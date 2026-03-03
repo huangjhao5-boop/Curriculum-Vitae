@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>人生履歴書 V15.9 (Google Logout Added)</title>
+  <title>人生履歴書 V16.2 (Sync Conflict & Auth Fix)</title>
   
   <!-- Chart.js for Radar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -163,8 +163,8 @@ const manifestStr = JSON.stringify({
 document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="data:application/manifest+json;charset=utf-8,${encodeURIComponent(manifestStr)}">`);
 
 /**
- * 人生履歴書 核心エンジン (V15.9)
- * 修正點：Google アカウントログアウト機能の追加、ゲストUI整理
+ * 人生履歴書 核心エンジン (V16.2)
+ * 修正點：Google ログイン時の上書き防止(競合解決)、アカウント切替の強制
  */
 const STAGES = ['乳幼児期 (0-6歳)', '小学生 (7-12歳)', '中学生 (13-15歳)', '高校生 (16-18歳)', '大学/専門 (19-22歳)', '20代 (若手社会人)', '30代 (中堅)', '40代以降', '全期間共通'];
 const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニケーション', '専門資格'];
@@ -213,8 +213,39 @@ const App = {
   saveData() {
     try {
       localStorage.setItem(this.DB_KEY, JSON.stringify(this.data));
-      if(window.CloudSync?.isLoggedIn) this.triggerBackgroundSync();
+      // 若已登入且未被強制暫停同步，則背景上傳
+      if(window.CloudSync?.isLoggedIn && !window.CloudSync.pauseSync) {
+          this.triggerBackgroundSync();
+      }
     } catch (e) { this.showAlert('ストレージ不足です。画像を減らしてください。'); }
+  },
+
+  // 判斷目前本機資料是否為「完全空白的預設狀態」
+  isLocalDefault() {
+      const keys = Object.keys(this.data.profiles);
+      if (keys.length > 1) return false;
+      const p = this.data.profiles['parent_self'];
+      if (!p || p.name !== '本人') return false;
+      if (p.history.length > 0 || p.skills.length > 0 || p.plans.length > 0 || p.achievements.length > 0) return false;
+      if (p.basic.birthday || p.basic.photo || p.basic.phone || p.basic.email || p.basic.address) return false;
+      return true;
+  },
+
+  // 解決雲端與本機的衝突
+  resolveConflict(choice) {
+      if (choice === 'cloud') {
+          this.data = this.state.dialog.cloudData;
+          localStorage.setItem(this.DB_KEY, JSON.stringify(this.data));
+          window.CloudSync.pauseSync = false;
+          this.state.dialog = null;
+          this.showAlert("クラウドのデータで復元しました。再読み込みします。");
+          setTimeout(() => location.reload(), 1000);
+      } else if (choice === 'local') {
+          window.CloudSync.pauseSync = false;
+          this.state.dialog = null;
+          this.triggerBackgroundSync();
+          this.showAlert("ローカルのデータでクラウドを上書きしました。");
+      }
   },
 
   async triggerBackgroundSync() {
@@ -510,6 +541,12 @@ const App = {
         btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button><button class="btn btn-success btn-full" onclick="App.confirmCompletePlan('${d.planId}', document.getElementById('complete-cat-select').value)">実績に追加</button></div>`;
     } else if (d.type === 'confirm_import') {
         btns = `<div style="display:flex; flex-direction:column; gap:10px;"><button class="btn btn-primary btn-full" onclick="App.executeImport(App.state.dialog.profile, 'child')">👨‍👩‍👦 お子様として追加 (共同管理)</button><button class="btn btn-danger btn-full" onclick="App.executeImport(App.state.dialog.profile, 'parent')">🔄 本人の記録として上書き (引き継ぎ)</button><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button></div>`;
+    } else if (d.type === 'sync_conflict') {
+        btns = `<div style="display:flex; flex-direction:column; gap:10px;">
+          <button class="btn btn-success btn-full" onclick="App.resolveConflict('cloud')">☁️ クラウドのデータを使う<br><span style="font-size:10px;font-weight:normal;">(現在の端末データを上書き)</span></button>
+          <button class="btn btn-primary btn-full" onclick="App.resolveConflict('local')">📱 現在の端末データを使う<br><span style="font-size:10px;font-weight:normal;">(クラウドを上書きしてバックアップ)</span></button>
+          <button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; window.CloudSync.logout(); App.render()">連携をキャンセル</button>
+        </div>`;
     } else if (d.type === 'loading') {
         btns = `<div class="loader-spinner"></div>`;
     }
@@ -521,12 +558,13 @@ const App = {
     
     // 如果尚未選擇角色，顯示首頁選項 (Main Entry)
     if (!this.state.loginRole) {
-      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V15.9</h2>
+      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V16.2</h2>
       <button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.setLoginRole('parent')">本人ログイン</button>
       ${childrenIds.length > 0 ? `<button class="btn btn-secondary btn-full" style="padding:15px;" onclick="App.setLoginRole('child')">お子様ログイン</button>` : ''}
       
       <div style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
-        <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">ゲスト・オフライン利用</p>
+        <button class="btn btn-google btn-full" style="margin-bottom:10px;" onclick="window.CloudSync.login()"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" style="width:16px; margin-right:8px;"> Googleアカウントでログイン</button>
+        <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px; margin-top:15px;">ゲスト・オフライン利用</p>
         <button class="btn btn-secondary btn-full" onclick="document.getElementById('login-import-json').click()">📁 ローカルデータを復元 (.json)</button>
         <input type="file" id="login-import-json" class="hidden" accept=".json" onchange="App.importLocalData(event)">
       </div></div></div>`;
@@ -534,7 +572,7 @@ const App = {
 
     // 驗證密碼畫面 (Auth Screen)
     const targetId = this.state.loginRole === 'parent' ? 'parent_self' : (this.state.loginChildId || childrenIds[0]);
-    if(this.state.loginRole === 'child' && !this.state.loginChildId) this.state.loginChildId = targetId; // init child selection
+    if(this.state.loginRole === 'child' && !this.state.loginChildId) this.state.loginChildId = targetId;
     
     const hasPwd = this.data.profiles[targetId]?.password;
     
@@ -682,16 +720,16 @@ const App = {
                  <img src="${window.CloudSync.user.photoURL}" style="width:30px; height:30px; border-radius:50%;">
                  <span style="font-size:13px; font-weight:bold; color:#0369a1;">${window.CloudSync.user.displayName}</span>
                </div>
-               <button class="btn btn-secondary btn-sm" onclick="window.CloudSync.logout()">ログアウト</button>
+               <button class="btn btn-secondary btn-sm" onclick="window.CloudSync.logout()">連携解除</button>
              </div>
-             <div class="grid-2"><button class="btn btn-primary" onclick="App.triggerBackgroundSync()">即時バックアップ</button></div>` 
+             <p style="font-size:12px; color:var(--text-sub);">データは自動的に同期されています。</p>` 
              : 
-             `<div id="google-auth-area" style="margin-bottom:10px;"><button class="btn btn-google btn-full" onclick="window.CloudSync.login()">Googleアカウントを連携する</button></div>`
+             `<div id="google-auth-area" style="margin-bottom:10px;"><button class="btn btn-google btn-full" onclick="window.CloudSync.login()"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" style="width:16px; margin-right:8px;"> アカウントを連携する</button></div>`
           }
         </div>
 
         <div class="card" style="background:#f8fafc;"><h3>💾 ローカルバックアップ (ゲスト用)</h3>
-          <p style="font-size:12px; color:var(--text-sub);">Google同期を使用しない場合、手動でローカルに保存・復元できます。</p>
+          <p style="font-size:12px; color:var(--text-sub);">手動でローカルに保存・復元できます。</p>
           <div class="grid-2">
             <button class="btn btn-secondary" onclick="App.exportLocalData()">エクスポート (.json)</button>
             <button class="btn btn-secondary" onclick="document.getElementById('inp-import-json').click()">インポート (.json)</button>
@@ -800,31 +838,86 @@ window.onload = () => App.init();
     "appId": "1:556917387273:web:9e36b3f666d566e64288d8"
   };
 
-  const app = initializeApp(fbConfig); const auth = getAuth(app); const db = getFirestore(app); const provider = new GoogleAuthProvider();
-  window.CloudSync = { isLoggedIn: false, user: null };
+  const app = initializeApp(fbConfig); const auth = getAuth(app); const db = getFirestore(app); 
+  
+  // 核心修正 2: 設置 Google Auth Provider 強制每次登入都選擇帳號
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
 
-  onAuthStateChanged(auth, (user) => {
+  window.CloudSync = { isLoggedIn: false, user: null, pauseSync: false };
+
+  onAuthStateChanged(auth, async (user) => {
     if (user) { 
       window.CloudSync.isLoggedIn = true; window.CloudSync.user = user; 
+      
+      // 核心修正 1: 自動防衝突 (Auto-pull on empty cache to prevent wiping cloud)
+      if(App.isLocalDefault()) {
+          try {
+              const s = await getDoc(doc(db, 'users', user.uid, 'life_resume', 'mainData'));
+              if(s.exists()) {
+                  App.data = JSON.parse(s.data().data);
+                  localStorage.setItem(App.DB_KEY, JSON.stringify(App.data));
+              }
+          } catch(e) {}
+      }
+      
+      if(typeof App !== 'undefined' && App.render) App.render();
     } else {
       window.CloudSync.isLoggedIn = false; window.CloudSync.user = null;
+      if(typeof App !== 'undefined' && App.render) App.render();
     }
-    if(typeof App !== 'undefined' && App.render) App.render();
   });
 
-  window.CloudSync.login = () => signInWithPopup(auth, provider).catch(e => alert(e.message));
-  
-  window.CloudSync.logout = () => signOut(auth).then(() => alert("Googleアカウントからログアウトしました。")).catch(e => alert(e.message));
-  
-  window.CloudSync.loginRestore = async () => {
-    try {
-        const result = await signInWithPopup(auth, provider);
-        const s = await getDoc(doc(db, 'users', result.user.uid, 'life_resume', 'mainData')); 
-        if(s.exists()) { localStorage.setItem('LIFE_RESUME_V12_DB', JSON.stringify(JSON.parse(s.data().data))); alert("クラウドからの復元が完了しました。"); location.reload(); } 
-        else { alert("クラウド上にデータが見つかりません。"); }
-    } catch(e) { alert(e.message); }
+  window.CloudSync.login = async () => {
+      try {
+          const result = await signInWithPopup(auth, provider);
+          await window.CloudSync.checkConflict(result.user);
+      } catch(e) {
+          if (e.code !== 'auth/popup-closed-by-user') alert(e.message);
+      }
   };
 
+  window.CloudSync.checkConflict = async (user) => {
+      App.state.dialog = { type: 'loading', message: 'クラウドデータを確認中...' };
+      App.render();
+      try {
+          const s = await getDoc(doc(db, 'users', user.uid, 'life_resume', 'mainData'));
+          if (s.exists()) {
+              const cloudData = JSON.parse(s.data().data);
+              if (App.isLocalDefault()) {
+                  // Local is empty -> Auto restore
+                  App.data = cloudData;
+                  localStorage.setItem(App.DB_KEY, JSON.stringify(cloudData));
+                  App.state.dialog = null;
+                  App.showAlert("クラウドからデータを自動復元しました。");
+              } else {
+                  // Conflict detected
+                  window.CloudSync.pauseSync = true; // 暫停背景備份
+                  App.state.dialog = {
+                      type: 'sync_conflict',
+                      cloudData: cloudData,
+                      message: '⚠️ データの競合を検出しました\n\n現在の端末とクラウドの両方にデータが存在します。\nどちらのデータを優先しますか？'
+                  };
+                  App.render();
+              }
+          } else {
+              // No cloud data -> Safe to push local
+              App.state.dialog = null;
+              App.showAlert("クラウド連携が完了しました。現在のデータをバックアップします。");
+              App.triggerBackgroundSync();
+          }
+      } catch(e) {
+          App.state.dialog = null;
+          App.showAlert("エラーが発生しました: " + e.message);
+      }
+  };
+  
+  window.CloudSync.logout = () => {
+      signOut(auth).then(() => {
+          App.showAlert("Googleアカウントの連携を解除しました。");
+      }).catch(e => alert(e.message));
+  };
+  
   window.CloudSync.backup = async (d) => {
     if(!auth.currentUser) return {success:false};
     try { await setDoc(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData'), { data: JSON.stringify(d), ts: serverTimestamp() }); return {success:true}; }
