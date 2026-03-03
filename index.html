@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>人生履歴書 V14.3 (JIS規格 & 日本語ロジック修正版)</title>
+  <title>人生履歴書 V15.0 (分析・目標管理 & 個別認証版)</title>
   <style>
     /* =========================================
        1. 基本デザイン (Base Design)
@@ -12,98 +12,81 @@
       --primary: #0f766e;
       --plan-my: #8b5cf6;
       --plan-parent: #f59e0b;
+      --skill-color: #10b981;
+      --achieve-color: #f97316;
+      --birth-color: #ec4899;
       --bg-color: #f1f5f9;
       --card-bg: #ffffff;
       --text-main: #334155;
       --text-sub: #64748b;
       --border: #cbd5e1;
       --danger: #ef4444;
-      --success: #10b981;
-      --radius: 8px;
+      --radius: 12px;
     }
     body { font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; box-sizing: border-box; }
     *, *::before, *::after { box-sizing: inherit; }
     
-    .container { max-width: 1000px; margin: 0 auto; padding: 20px; padding-bottom: 80px; overflow-x: hidden; }
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .card-title { font-size: 18px; font-weight: bold; color: var(--primary); border-bottom: 2px solid var(--bg-color); padding-bottom: 10px; margin-top: 0; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;}
+    .container { max-width: 1000px; margin: 0 auto; padding: 20px; padding-bottom: 80px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .card-title { font-size: 18px; font-weight: bold; color: var(--primary); border-bottom: 2px solid var(--bg-color); padding-bottom: 12px; margin-top: 0; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;}
     
-    .btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: opacity 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
-    .btn:hover { opacity: 0.8; }
+    /* Stats Widget */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .stat-box { background: #f8fafc; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #e2e8f0; }
+    .stat-val { font-size: 20px; font-weight: bold; color: var(--primary); }
+    .stat-label { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
+
+    .btn { padding: 8px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+    .btn:active { transform: scale(0.98); }
     .btn-primary { background: var(--primary); color: white; }
     .btn-secondary { background: #e2e8f0; color: var(--text-main); }
     .btn-danger { background: #fee2e2; color: var(--danger); }
-    .btn-success { background: #d1fae5; color: #047857; }
     .btn-google { background: #ffffff; color: #334155; border: 1px solid #cbd5e1; }
     .btn-full { width: 100%; }
 
-    input[type="text"], input[type="password"], input[type="number"], input[type="date"], select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; margin-bottom: 12px; background: #fff; font-family: inherit; }
-    input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
-    input[type="checkbox"] { transform: scale(1.2); margin-right: 8px; cursor: pointer; }
+    input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; margin-bottom: 12px; background: #fff; }
+    input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1); }
     
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     .hidden { display: none !important; }
 
     /* Header */
-    .header { background: var(--card-bg); padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-    .sync-status { font-size: 11px; color: #10b981; margin-left: 5px; font-weight: normal; }
-    .sync-status.syncing { color: #8b5cf6; animation: blink 1s infinite; }
-    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    .header { background: var(--card-bg); padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .user-pill { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #f0fdf4; border-radius: 30px; font-size: 12px; color: #166534; }
+    .user-avatar { width: 26px; height: 26px; border-radius: 50%; }
+    .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
+    .sync-dot.online { background: #10b981; }
+    .sync-dot.syncing { background: #8b5cf6; animation: blink 1s infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
     /* Tabs */
-    .tabs-wrapper { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
-    .tab { padding: 10px 20px; cursor: pointer; font-size: 14px; color: var(--text-sub); border-bottom: 3px solid transparent; white-space: nowrap; }
+    .tabs-wrapper { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 20px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+    .tab { padding: 12px 18px; cursor: pointer; font-size: 14px; color: var(--text-sub); border-bottom: 3px solid transparent; white-space: nowrap; transition: 0.2s; }
     .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: bold; }
 
-    /* List Items */
-    .list-item { background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 15px; margin-bottom: 10px; display: flex; gap: 15px; align-items: flex-start; justify-content: space-between;}
-    .item-content { flex: 1; cursor: pointer; }
-    .item-meta { font-size: 12px; color: var(--text-sub); margin-bottom: 5px; }
-    .item-title { font-weight: bold; font-size: 16px; margin-bottom: 5px; }
-    .tag { padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 5px; color: white; }
-    
-    /* Photos */
-    .photo-thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; }
-    .profile-photo-area { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 15px; border: 1px dashed var(--border); border-radius: 8px; background: #f8fafc; }
-    .profile-photo-img { width: 100px; height: 130px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; }
-
-    /* 雙欄時間軸 */
-    .timeline-dual { position: relative; max-width: 100%; margin: 20px 0; padding: 20px 0; }
+    /* Timeline */
+    .timeline-dual { position: relative; margin: 20px 0; }
     .timeline-dual::after { content: ''; position: absolute; width: 4px; background-color: var(--border); top: 0; bottom: 0; left: 50%; transform: translateX(-50%); border-radius: 2px; }
-    .tl-container { padding: 10px 30px; position: relative; background-color: inherit; width: 50%; box-sizing: border-box; }
+    .tl-container { padding: 10px 30px; position: relative; width: 50%; box-sizing: border-box; }
     .tl-left { left: 0; text-align: right; }
     .tl-right { left: 50%; text-align: left; }
-    .tl-dot { position: absolute; width: 16px; height: 16px; background-color: white; top: 15px; border-radius: 50%; z-index: 1; border: 4px solid; }
-    .tl-left .tl-dot { right: -10px; }
-    .tl-right .tl-dot { left: -10px; }
-    .tl-content { padding: 15px; background: white; border-radius: 8px; border: 1px solid var(--border); position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-
-    /* Export Selector */
-    .export-check-list { max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 10px; background: #f8fafc; margin-bottom: 10px; }
-    .export-check-item { display: flex; align-items: center; padding: 5px 0; border-bottom: 1px dashed #e2e8f0; font-size: 13px; }
+    .tl-dot { position: absolute; width: 14px; height: 14px; background-color: white; top: 18px; border-radius: 50%; z-index: 1; border: 3px solid; }
+    .tl-left .tl-dot { right: -7px; }
+    .tl-right .tl-dot { left: -7px; }
+    .tl-content { padding: 15px; background: white; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
     /* Overlays */
-    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(241, 245, 249, 0.95); z-index: 2000; display: flex; justify-content: center; align-items: center; overflow-y: auto;}
-    .dialog-box { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-    .modal-box { background: white; padding: 25px; border-radius: 8px; width: 95%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(241, 245, 249, 0.98); z-index: 2000; display: flex; justify-content: center; align-items: center; }
+    .dialog-box { background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
     .custom-dialog-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center; }
-    .custom-dialog-box { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; }
+    .custom-dialog-box { background: white; padding: 25px; border-radius: 16px; width: 90%; max-width: 320px; text-align: center; }
 
-    /* JIS Print Layout */
-    #jis-resume-page {
-      background: white; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 10mm; font-family: "MS Mincho", "Hiragino Mincho ProN", serif; color: black; box-sizing: border-box;
-    }
-    .jis-table { width: 100%; border-collapse: collapse; border: 2px solid black; margin-bottom: 5mm; table-layout: fixed; }
-    .jis-table th, .jis-table td { border: 1px solid black; padding: 5px; font-size: 11pt; vertical-align: middle; word-wrap: break-word; }
-    .txt-center { text-align: center; }
-    .border-dash { border-bottom: 1px dashed black !important; }
-
-    @media print {
-      body * { visibility: hidden; }
-      .print-actions { display: none !important; }
-      .resume-preview-wrapper { background: white; padding: 0; }
-      #jis-resume-page, #jis-resume-page * { visibility: visible; }
-      #jis-resume-page { position: absolute; left: 0; top: 0; margin: 0; }
+    @media screen and (max-width: 600px) {
+      .timeline-dual::after { left: 20px; }
+      .tl-container { width: 100%; padding-left: 40px; text-align: left !important; left: 0 !important; }
+      .tl-left .tl-dot, .tl-right .tl-dot { left: 13px; }
+      .tl-content { border-left-width: 4px !important; border-right-width: 1px !important; }
     }
   </style>
 </head>
@@ -114,24 +97,24 @@
 
 <script>
 /**
- * 人生履歴書 核心エンジン (V14.3)
- * 修正点：Firebase匯入修正、日本語ロジック修正、免責事項、パスワード設定復旧
+ * 人生履歴書 核心エンジン (V15.0)
+ * 修正點：個別パスワード認証、成長分析（統計）、目標管理（PDCA）
  */
 const App = {
   DB_KEY: 'LIFE_RESUME_V12_DB', 
   data: {
-    settings: { password: '', lastSync: null },
+    settings: { lastSync: null },
     profiles: {
       'parent_self': {
-        id: 'parent_self', name: '本人', role: 'parent',
-        basic: { furigana: '', gender: 'male', birthday: '', postalCode: '', address: '', phone: '', email: '', spouse: 'no', dependents: 0, commuteHour: '', commuteMinute: '', motivation: '', photo: null },
+        id: 'parent_self', name: '本人', role: 'parent', password: '', // 個別密碼
+        basic: { furigana: '', gender: 'male', birthday: '', postalCode: '', address: '', phone: '', email: '', spouse: 'no', dependents: 0, commuteHour: 0, commuteMinute: 0, motivation: '', photo: null },
         history: [], skills: [], achievements: [], events: [], plans: []
       }
     }
   },
   
   state: {
-    view: 'login',
+    view: 'login', // login, app, preview
     loginRole: '', 
     activeProfileId: 'parent_self',
     activeTab: 'overview',
@@ -143,12 +126,13 @@ const App = {
 
   init() {
     this.loadData();
+    // 如果只有本人且沒密碼，直接進入
     const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
-    if (childrenIds.length === 0 && !this.data.settings.password) {
+    const selfHasPwd = this.data.profiles.parent_self.password;
+    if (childrenIds.length === 0 && !selfHasPwd) {
         this.state.view = 'app';
         this.state.loginRole = 'parent';
-        this.state.activeProfileId = 'parent_self';
-    } else if (childrenIds.length === 0 && this.state.view === 'login') {
+    } else if (childrenIds.length === 0) {
         this.state.loginRole = 'parent';
     }
     this.render();
@@ -158,109 +142,74 @@ const App = {
     try {
       const raw = localStorage.getItem(this.DB_KEY);
       if (raw) this.data = JSON.parse(raw);
-    } catch(e) { console.error("DB Load Error", e); }
+    } catch(e) { console.error("Load Error", e); }
   },
 
   saveData() {
     try {
       localStorage.setItem(this.DB_KEY, JSON.stringify(this.data));
       if(window.CloudSync?.isLoggedIn) this.triggerBackgroundSync();
-    } catch (e) {
-      this.showAlert('データの保存に失敗しました。画像が大きすぎるか、ストレージ容量が不足しています。');
-    }
+    } catch (e) { this.showAlert('ストレージ不足です。画像を減らしてください。'); }
   },
 
   async triggerBackgroundSync() {
     if(this.state.isSyncing) return;
     this.state.isSyncing = true;
-    this.updateSyncIndicator();
+    this.updateHeaderSyncUI();
     const res = await window.CloudSync.backup(this.data);
     this.state.isSyncing = false;
     if(res.success) {
         this.data.settings.lastSync = Date.now();
         localStorage.setItem(this.DB_KEY, JSON.stringify(this.data));
     }
-    this.updateSyncIndicator();
-  },
-
-  updateSyncIndicator() {
-    const el = document.getElementById('sync-indicator');
-    if(!el) return;
-    if(this.state.isSyncing) { el.innerText = '● 同期中...'; el.className = 'sync-status syncing'; }
-    else { el.innerText = window.CloudSync?.isLoggedIn ? '● 接続中' : ''; el.className = 'sync-status'; }
+    this.updateHeaderSyncUI();
   },
 
   getProfile() { return this.data.profiles[this.state.activeProfileId]; },
 
-  showAlert(message) {
-    this.state.dialog = { type: 'alert', message, onConfirm: () => { this.state.dialog = null; this.render(); } };
-    this.render();
-  },
-  showConfirm(message, onConfirmCallback) {
-    this.state.dialog = { type: 'confirm', message, onConfirm: () => { this.state.dialog = null; onConfirmCallback(); this.render(); }, onCancel: () => { this.state.dialog = null; this.render(); } };
-    this.render();
-  },
-  showPrompt(message, onConfirmCallback) {
-    this.state.dialog = { type: 'prompt', message, onConfirm: (val) => { this.state.dialog = null; if(val !== null) onConfirmCallback(val); this.render(); }, onCancel: () => { this.state.dialog = null; this.render(); } };
+  // UI 彈窗
+  showAlert(message) { this.state.dialog = { type: 'alert', message, onConfirm: () => { this.state.dialog = null; this.render(); } }; this.render(); },
+  showConfirm(message, onConfirmCallback) { this.state.dialog = { type: 'confirm', message, onConfirm: () => { this.state.dialog = null; onConfirmCallback(); this.render(); }, onCancel: () => { this.state.dialog = null; this.render(); } }; this.render(); },
+  showPrompt(message, onConfirmCallback) { this.state.dialog = { type: 'prompt', message, onConfirm: (val) => { this.state.dialog = null; if(val !== null) onConfirmCallback(val); this.render(); }, onCancel: () => { this.state.dialog = null; this.render(); } }; this.render(); },
+
+  setLoginRole(role) { this.state.loginRole = role; this.render(); },
+  
+  executeLogin() {
+    const roleId = this.state.loginRole === 'parent' ? 'parent_self' : document.getElementById('login-child-select').value;
+    const targetProfile = this.data.profiles[roleId];
+    const pwd = (targetProfile.password || '').trim();
+    
+    if (pwd) {
+        const input = document.getElementById('login-pwd').value;
+        if (input !== pwd) { this.showAlert('認証エラー：パスワードが正しくありません。'); return; }
+    }
+    
+    this.state.activeProfileId = roleId;
+    this.state.view = 'app';
     this.render();
   },
 
-  setLoginRole(role) { this.state.loginRole = role; this.render(); },
-  executeLogin() {
-    const pwd = (this.data.settings.password || '').trim();
-    if (pwd) {
-        const pwdInput = document.getElementById('login-pwd').value;
-        if (pwdInput !== pwd) { this.showAlert('認証に失敗しました。パスワードが正しくありません。'); return; }
-    }
-    this.state.view = 'app';
-    if (this.state.loginRole === 'parent') this.state.activeProfileId = 'parent_self';
-    else this.state.activeProfileId = document.getElementById('login-child-select').value;
-    this.render();
-  },
   logout() { this.state.view = 'login'; this.state.loginRole = ''; this.init(); },
 
   addChild() {
-    this.showPrompt("お子様の名前を入力してください：", (name) => {
+    this.showPrompt("お子様の名前を入力：", (name) => {
       const newId = 'child_' + Date.now();
       this.data.profiles[newId] = {
-        id: newId, name: name.trim(), role: 'child',
-        basic: { furigana: '', gender: 'male', birthday: '', postalCode: '', address: '', phone: '', email: '', spouse: 'no', dependents: 0, commuteHour: '', commuteMinute: '', motivation: '', photo: null },
+        id: newId, name: name.trim(), role: 'child', password: '', 
+        basic: { furigana: '', gender: 'male', birthday: '', postalCode: '', address: '', phone: '', email: '', spouse: 'no', dependents: 0, commuteHour: 0, commuteMinute: 0, motivation: '', photo: null },
         history: [], skills: [], achievements: [], events: [], plans: []
       };
       this.state.activeProfileId = newId;
       this.saveData();
-      if (!this.data.settings.password) {
-          this.showConfirm("セキュリティのためパスワード設定を推奨します。今すぐ設定しますか？", () => {
-             this.showPrompt("新しいパスワードを入力：", (pwd) => {
-                 if(pwd.trim()){ this.data.settings.password = pwd.trim(); this.saveData(); this.showAlert("設定が完了しました。"); } else { this.render(); }
-             });
-          });
-      } else { this.render(); }
+      this.showConfirm("お子様専用のパスワードを設定しますか？（後でも変更可能です）", () => {
+         this.showPrompt("パスワードを入力：", (p) => { if(p.trim()){ this.data.profiles[newId].password = p.trim(); this.saveData(); this.render(); } });
+      });
     });
   },
 
-  switchProfile(id) { this.state.activeProfileId = id; this.render(); },
-  updateBasic(field, value) { this.getProfile().basic[field] = value; this.saveData(); },
-  updateName(value) { this.getProfile().name = value; this.saveData(); this.render(); },
-
-  processImage(file, callback) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX = 400; 
-        let w = img.width, h = img.height;
-        if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
-        else { if (h > MAX) { w *= MAX / h; h = MAX; } }
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        callback(canvas.toDataURL('image/jpeg', 0.6));
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+  updateBasic(field, value) { 
+    if(field === 'birthday' && value > new Date().toISOString().split('T')[0]) { this.showAlert("未来の日付は設定できません。"); return; }
+    this.getProfile().basic[field] = value; this.saveData(); 
   },
 
   uploadPhoto(target, category = null, itemId = null) {
@@ -277,6 +226,26 @@ const App = {
     input.click();
   },
 
+  processImage(file, callback) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 400; let w = img.width, h = img.height;
+        if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+        else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  },
+
+  // CRUD
   openModal(category, itemId = null) { this.state.modalContext = { category, itemId }; this.render(); },
   closeModal() { this.state.modalContext = null; this.render(); },
   saveModalItem() {
@@ -285,12 +254,14 @@ const App = {
     const id = isNew ? 'item_' + Date.now() : ctx.itemId;
     const itemData = { 
       id, 
-      year: document.getElementById('mod-year').value, 
-      month: document.getElementById('mod-month').value, 
+      year: parseInt(document.getElementById('mod-year').value), 
+      month: parseInt(document.getElementById('mod-month').value), 
       title: document.getElementById('mod-title').value, 
       desc: document.getElementById('mod-desc').value,
       stage: document.getElementById('mod-stage').value 
     };
+    if(itemData.year > 2100) { this.showAlert("正しい西暦を入力してください。"); return; }
+    if(ctx.category === 'history') itemData.eduStatus = document.getElementById('mod-edu-status').value;
     if(ctx.category === 'plans') {
        if(isNew) { itemData.author = this.state.loginRole; itemData.visibility = 'hidden'; } 
        else { const ex = p.plans.find(i => i.id === id); itemData.author = ex.author; itemData.visibility = ex.visibility; }
@@ -301,38 +272,10 @@ const App = {
   },
 
   deleteItem(category, itemId) {
-    this.showConfirm('項目を削除してもよろしいですか？', () => { this.getProfile()[category] = this.getProfile()[category].filter(i => i.id !== itemId); this.saveData(); this.render(); });
+    this.showConfirm('項目を削除しますか？', () => { this.getProfile()[category] = this.getProfile()[category].filter(i => i.id !== itemId); this.saveData(); this.render(); });
   },
 
-  requestAccess(itemId) {
-    const item = this.getProfile().plans.find(i => i.id === itemId);
-    if(item) { item.visibility = 'requested'; this.saveData(); this.render(); this.showAlert('表示リクエストを送信しました。'); }
-  },
-  grantAccess(itemId) {
-    const item = this.getProfile().plans.find(i => i.id === itemId);
-    if(item) { item.visibility = 'visible'; this.saveData(); this.render(); }
-  },
-
-  exportLocalData() {
-    const blob = new Blob([JSON.stringify(this.data)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `Resume_Backup.json`; a.click();
-  },
-  importLocalData(event) {
-    const file = event.target.files[0]; if (!file) return;
-    this.showConfirm('現在のデータが上書きされます。インポートを続行しますか？', () => {
-      const reader = new FileReader();
-      reader.onload = (e) => { this.data = JSON.parse(e.target.result); this.saveData(); location.reload(); };
-      reader.readAsText(file);
-    });
-  },
-
-  clearAllData() {
-    this.showConfirm('【警告】すべてのデータが初期化されます。よろしいですか？', () => {
-        localStorage.removeItem(this.DB_KEY);
-        location.reload();
-    });
-  },
+  grantAccess(itemId) { const item = this.getProfile().plans.find(i => i.id === itemId); if(item) { item.visibility = 'visible'; this.saveData(); this.render(); } },
 
   render() {
     const root = document.getElementById('app-root');
@@ -340,22 +283,34 @@ const App = {
     if (this.state.modalContext && this.state.view === 'app') html += this.templateModal();
     if (this.state.dialog) html += this.templateDialog();
     root.innerHTML = html;
+    this.updateHeaderSyncUI();
+  },
+
+  updateHeaderSyncUI() {
+    const ind = document.getElementById('sync-indicator');
+    if(!ind) return;
+    if(window.CloudSync?.isLoggedIn) {
+        ind.innerHTML = `<div class="sync-dot ${this.state.isSyncing?'syncing':'online'}"></div> ${this.state.isSyncing?'同期中':'同期済'}`;
+    }
   },
 
   templateLogin() {
     const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
     if (!this.state.loginRole && childrenIds.length > 0) {
-      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V14.3</h2>
-      <button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:12px;" onclick="App.setLoginRole('parent')">本人ログイン</button>
-      <button class="btn btn-secondary btn-full" style="padding:12px;" onclick="App.setLoginRole('child')">お子様ログイン</button>
-      <div style="margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
-        <button class="btn btn-google btn-full" onclick="window.CloudSync.loginRestore()">☁️ クラウドから復元</button>
+      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V15.0</h2>
+      <button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.setLoginRole('parent')">本人ログイン</button>
+      <button class="btn btn-secondary btn-full" style="padding:15px;" onclick="App.setLoginRole('child')">お子様ログイン</button>
+      <div style="margin-top:25px; border-top:1px solid #eee; padding-top:20px;">
+        <button class="btn btn-google btn-full" onclick="window.CloudSync.loginRestore()">☁️ クラウドから復元 (Google)</button>
       </div></div></div>`;
     }
-    return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h3>${this.state.loginRole === 'parent' ? '管理者認証' : 'お子様認証'}</h3>
-    ${this.state.loginRole === 'child' ? `<label style="font-size:12px; display:block; text-align:left;">対象者を選択</label><select id="login-child-select">${childrenIds.map(id => `<option value="${id}">${this.data.profiles[id].name}</option>`).join('')}</select>` : ''}
-    ${this.data.settings.password ? `<input type="password" id="login-pwd" placeholder="パスワードを入力" style="text-align:center;">` : '<p style="font-size:13px; color:#64748b;">パスワードは未設定です</p>'}
-    <div class="grid-2" style="margin-top:15px;">
+    const targetId = this.state.loginRole === 'parent' ? 'parent_self' : (childrenIds[0] || 'parent_self');
+    const hasPwd = this.data.profiles[targetId]?.password;
+    return `<div class="overlay"><div class="dialog-box" style="text-align:center;">
+    <h3>${this.state.loginRole === 'parent' ? '本人認証' : 'お子様認証'}</h3>
+    ${this.state.loginRole === 'child' ? `<select id="login-child-select" style="margin-bottom:15px;">${childrenIds.map(id => `<option value="${id}">${this.data.profiles[id].name}</option>`).join('')}</select>` : ''}
+    ${hasPwd ? `<input type="password" id="login-pwd" placeholder="個別パスワードを入力" style="text-align:center;">` : '<p style="font-size:13px; color:#64748b; margin-bottom:15px;">パスワード未設定</p>'}
+    <div class="grid-2">
     ${childrenIds.length > 0 ? `<button class="btn btn-secondary btn-full" onclick="App.setLoginRole('')">戻る</button>` : '<div></div>'}
     <button class="btn btn-primary btn-full" onclick="App.executeLogin()">ログイン</button>
     </div></div></div>`;
@@ -363,88 +318,113 @@ const App = {
 
   templateApp() {
     const p = this.getProfile(); const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
-    const age = p.basic.birthday ? Math.floor((Date.now() - new Date(p.basic.birthday).getTime()) / 31557600000) : 0;
-    const lifeBase = p.basic.gender === 'female' ? 87 : 81; 
-    const lifePct = Math.min(100, Math.round((age / lifeBase) * 100));
-    return `<div class="header"><div style="font-size:18px; font-weight:bold; color:var(--primary); display:flex; align-items:center;">📖 ${p.name} <span id="sync-indicator" class="sync-status">${window.CloudSync?.isLoggedIn ? '● 接続済' : ''}</span></div><div style="display:flex; gap:10px; align-items:center;">${this.state.loginRole === 'parent' ? `<select onchange="App.switchProfile(this.value)" style="width:auto;"><option value="parent_self" ${p.id === 'parent_self' ? 'selected' : ''}>本人の記録</option>${childrenIds.map(id => `<option value="${id}" ${p.id === id ? 'selected' : ''}>${this.data.profiles[id].name}</option>`).join('')}</select><button class="btn btn-primary btn-sm" onclick="App.addChild()">+子供</button>` : `<span class="tag" style="background:var(--primary);">閲覧モード</span>`}<button class="btn btn-secondary btn-sm" onclick="App.logout()">終了</button></div></div><div class="container"><div class="card" style="background: linear-gradient(135deg, #f0fdfa, #ffffff);"><div style="display:flex; justify-content:space-between; align-items:flex-end;"><div><div style="font-size:12px; font-weight:bold;">LIFE JOURNEY</div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${age} 歳 <span style="font-size:14px; color:#94a3b8; font-weight:normal;">/ 基準 ${lifeBase} 歳</span></div></div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${lifePct}%</div></div><div style="background:#e2e8f0; height:8px; border-radius:4px; margin-top:10px; overflow:hidden;"><div style="height:100%; background:var(--primary); width:${lifePct}%;"></div></div></div><div class="tabs-wrapper">${['overview:対比タイムライン', 'basic:基本情報(JIS)', 'history:学歴・職歴', 'skills:免許・資格', 'achievements:実績・出来事', 'plans:ライフプラン', 'settings:設定・出力'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.state.activeTab='${k}'; App.render()">${v}</div>`; }).join('')}</div><div id="tab-content">${this.renderTabContent(p)}</div></div>`;
+    const b = p.basic; const age = b.birthday ? Math.floor((Date.now() - new Date(b.birthday).getTime()) / 31557600000) : 0;
+    const lifeBase = b.gender === 'female' ? 87 : 81; const lifePct = Math.min(100, Math.round((age / lifeBase) * 100));
+    let userUI = (window.CloudSync?.isLoggedIn && window.CloudSync.user) ? `<div class="user-pill"><img src="${window.CloudSync.user.photoURL}" class="user-avatar"> ${window.CloudSync.user.displayName}</div>` : '';
+
+    return `<div class="header">
+      <div style="font-size:18px; font-weight:bold; color:var(--primary); display:flex; align-items:center;">📖 ${p.name} <div id="sync-indicator" class="sync-indicator" style="margin-left:10px;"></div></div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        ${userUI}
+        ${this.state.loginRole === 'parent' ? `<select onchange="App.switchProfile(this.value)" style="width:auto; margin:0;"><option value="parent_self" ${p.id === 'parent_self' ? 'selected' : ''}>本人の記録</option>${childrenIds.map(id => `<option value="${id}" ${p.id === id ? 'selected' : ''}>${this.data.profiles[id].name}</option>`).join('')}</select><button class="btn btn-primary btn-sm" onclick="App.addChild()">+子供</button>` : `<span class="tag" style="background:var(--primary);">閲覧モード</span>`}
+        <button class="btn btn-secondary btn-sm" onclick="App.logout()">終了</button>
+      </div>
+    </div>
+    <div class="container">
+      <div class="card" style="background: linear-gradient(135deg, #f0fdfa, #ffffff);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+          <div><div style="font-size:12px; font-weight:bold; color:var(--text-sub);">LIFE PROGRESS</div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${age} 歳 <span style="font-size:14px; color:#94a3b8; font-weight:normal;">/ 期待寿命 ${lifeBase} 歳</span></div></div>
+          <div style="font-size:24px; font-weight:bold; color:var(--primary);">${lifePct}%</div>
+        </div>
+        <div style="background:#e2e8f0; height:10px; border-radius:10px; margin-top:12px; overflow:hidden;"><div style="height:100%; background:var(--primary); width:${lifePct}%;"></div></div>
+      </div>
+      <div class="tabs-wrapper">${['overview:📊 分析・対比', 'basic:基本情報(JIS)', 'history:学歴・職歴', 'skills:免許・資格', 'achievements:表彰・出来事', 'plans:🎯 目標管理', 'settings:設定・出力'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.state.activeTab='${k}'; App.render()">${v}</div>`; }).join('')}</div>
+      <div id="tab-content">${this.renderTabContent(p)}</div>
+    </div>`;
   },
 
   renderTabContent(p) {
-    const tab = this.state.activeTab;
+    const tab = this.state.activeTab; const b = p.basic;
+    
     if(tab === 'overview') {
-      let items = []; const catMap = { history:'経歴', skills:'資格', achievements:'実績', events:'出来事' };
-      ['history', 'skills', 'achievements', 'events'].forEach(cat => (p[cat]||[]).forEach(i => items.push({...i, catLabel: catMap[cat], color: 'var(--primary)'})));
-      (p.plans||[]).forEach(i => {
+      // 📊 統計計算
+      const totalHistory = p.history.length;
+      const totalSkills = p.skills.length;
+      const totalPlans = p.plans.length;
+      const reachedPlans = p.plans.filter(pl => p.history.some(h => h.year === pl.year)).length;
+      const successRate = totalPlans ? Math.round((reachedPlans / totalPlans) * 100) : 0;
+
+      let html = `
+        <div class="stats-grid">
+          <div class="stat-box"><div class="stat-val">${totalHistory}</div><div class="stat-label">学歴・職歴数</div></div>
+          <div class="stat-box"><div class="stat-val">${totalSkills}</div><div class="stat-label">免許・資格数</div></div>
+          <div class="stat-box"><div class="stat-val">${successRate}%</div><div class="stat-label">目標達成率</div></div>
+          <div class="stat-box"><div class="stat-val">${totalPlans}</div><div class="stat-label">ライフプラン数</div></div>
+        </div>
+        <div class="card"><div class="card-title">タイムライン対比</div><div class="timeline-dual">`;
+      
+      let items = [];
+      if(b.birthday) items.push({ year: new Date(b.birthday).getFullYear(), month: new Date(b.birthday).getMonth()+1, title: '誕生', catLabel: 'Birth', isPlan: false, color: 'var(--birth-color)' });
+      p.history.forEach(i => items.push({...i, catLabel: '経歴', color: 'var(--primary)'}));
+      p.skills.forEach(i => items.push({...i, catLabel: '資格', color: 'var(--skill-color)'}));
+      p.achievements.forEach(i => items.push({...i, catLabel: '実績', color: 'var(--achieve-color)'}));
+      p.plans.forEach(i => {
         const isOwner = i.author === this.state.loginRole;
         if(isOwner || i.visibility === 'visible') {
-           const label = (i.author === 'parent' && p.id !== 'parent_self') ? '親の期待' : 'プラン';
+           const label = (i.author === 'parent' && p.id !== 'parent_self') ? '保護者の期待' : 'プラン';
            const color = (i.author === 'parent' && p.id !== 'parent_self') ? 'var(--plan-parent)' : 'var(--plan-my)';
            items.push({...i, catLabel: label, isPlan:true, color: color});
-        } else { items.push({ year: i.year, month: i.month, title: '🔒 未公開プラン', catLabel: 'プラン', isPlan: true, color: '#cbd5e1' }); }
+        } else { items.push({ year: i.year, month: i.month, title: '🔒 未公開目標', catLabel: 'プラン', isPlan: true, color: '#cbd5e1' }); }
       });
-      items.sort((a,b) => (parseInt(a.year)||0)-(parseInt(b.year)||0) || (parseInt(a.month)||0)-(parseInt(b.month)||0));
-      let html = `<div class="timeline-dual">`;
+      items.sort((a,b) => (a.year||0)-(b.year||0) || (a.month||0)-(b.month||0));
+      
       items.forEach(i => {
-        const side = i.isPlan ? 'tl-right' : 'tl-left';
-        html += `<div class="tl-container ${side}"><div class="tl-dot" style="border-color: ${i.color};"></div><div class="tl-content" style="border-${i.isPlan?'left':'right'}:4px solid ${i.color};"><div style="font-size:12px;"><span class="tag" style="background:${i.color}">${i.catLabel}</span> ${i.year||'?'}年</div><div style="font-weight:bold;">${i.title}</div>${i.desc?`<div style="font-size:12px;">${i.desc}</div>`:''}${i.photo?`<img src="${i.photo}" style="width:100px; margin-top:5px; border-radius:4px;">`:''}</div></div>`;
+        html += `<div class="tl-container ${i.isPlan?'tl-right':'tl-left'}"><div class="tl-dot" style="border-color: ${i.color};"></div><div class="tl-content" style="border-${i.isPlan?'left':'right'}:4px solid ${i.color};"><div style="font-size:11px; font-weight:bold;"><span class="tag" style="background:${i.color}">${i.catLabel}</span> ${i.year}年</div><div style="font-weight:bold;">${i.title} ${i.eduStatus?`[${i.eduStatus}]`:''}</div>${i.desc?`<div style="font-size:12px; color:var(--text-sub);">${i.desc}</div>`:''}${i.photo?`<img src="${i.photo}" style="width:100%; margin-top:8px; border-radius:4px;">`:''}</div></div>`;
       });
-      return html + `</div>`;
+      return html + `</div></div>`;
     }
+
     if(tab === 'basic') {
-      const b = p.basic;
-      return `<div class="card"><div class="card-title">JIS 標準項目</div><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img"><button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">削除</button>` : `<div style="width:100px; height:130px; border:1px dashed #ccc;"></div><button class="btn btn-primary btn-sm" onclick="App.uploadPhoto('basic')">写真アップ</button>`}</div><div><label>氏名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)"><label>ふりがな</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)"><div class="grid-2"><div><label>性別</label><select onchange="App.updateBasic('gender', this.value)"><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label>生年月日</label><input type="date" value="${b.birthday||''}" onchange="App.updateBasic('birthday', this.value)"></div></div></div></div><div class="grid-2"><div><label>電話番号</label><input type="text" value="${b.phone||''}" onchange="App.updateBasic('phone', this.value)"></div><div><label>メールアドレス</label><input type="text" value="${b.email||''}" onchange="App.updateBasic('email', this.value)"></div></div><div class="grid-2"><div><label>郵便番号</label><input type="text" value="${b.postalCode||''}" onchange="App.updateBasic('postalCode', this.value)"></div><div><label>現住所</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)"></div></div><div class="grid-2"><div><label>配偶者</label><select onchange="App.updateBasic('spouse', this.value)"><option value="no" ${b.spouse==='no'?'selected':''}>無</option><option value="yes" ${b.spouse==='yes'?'selected':''}>有</option></select></div><div><label>扶養家族数 (除配偶者)</label><input type="number" value="${b.dependents||0}" onchange="App.updateBasic('dependents', this.value)"></div></div></div>`;
+      const today = new Date().toISOString().split('T')[0];
+      return `<div class="card"><div class="card-title">JIS 基礎情報</div><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img"><button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">削除</button>` : `<div style="width:100px; height:130px; border:1px dashed #ccc;"></div><button class="btn btn-primary btn-sm" onclick="App.uploadPhoto('basic')">写真貼付</button>`}</div><div><label>氏名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)"><label>ふりがな</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)"><div class="grid-2"><div><label>性別</label><select onchange="App.updateBasic('gender', this.value)"><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label>生年月日</label><input type="date" value="${b.birthday||''}" max="${today}" onchange="App.updateBasic('birthday', this.value)"></div></div></div></div><div class="grid-2"><div><label>電話番号</label><input type="text" value="${b.phone||''}" onchange="App.updateBasic('phone', this.value)"></div><div><label>メールアドレス</label><input type="text" value="${b.email||''}" onchange="App.updateBasic('email', this.value)"></div></div><div class="grid-2"><div><label>郵便番号</label><input type="text" value="${b.postalCode||''}" onchange="App.updateBasic('postalCode', this.value)"></div><div><label>現住所</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)"></div></div><div class="grid-2"><div><label>配偶者</label><select onchange="App.updateBasic('spouse', this.value)"><option value="no" ${b.spouse==='no'?'selected':''}>無</option><option value="yes" ${b.spouse==='yes'?'selected':''}>有</option></select></div><div><label>扶養家族数</label><input type="number" value="${b.dependents||0}" onchange="App.updateBasic('dependents', this.value)"></div></div></div>`;
     }
+
     if(tab === 'history') return this.buildListUI('history', '学歴・職歴');
     if(tab === 'skills') return this.buildListUI('skills', '免許・資格');
     if(tab === 'achievements') return this.buildListUI('achievements', '実績・出来事');
+    
     if(tab === 'plans') {
-        const myRole = this.state.loginRole; const requests = (p.plans||[]).filter(i => i.author === myRole && i.visibility === 'requested');
-        let reqHtml = ''; if(requests.length > 0) { reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3 style="color:#c2410c; margin-top:0;">承認待ちのリクエスト</h3>${requests.map(r => `<div class="list-item"><div>${r.year}年: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('${r.id}')">公開を承認</button></div>`).join('')}</div>`; }
+        const myRole = this.state.loginRole;
+        const requests = (p.plans||[]).filter(i => i.author === myRole && i.visibility === 'requested');
+        let reqHtml = ''; if(requests.length > 0) reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3>承認待ち</h3>${requests.map(r => `<div class="list-item"><div>${r.year}年: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('${r.id}')">承認</button></div>`).join('')}</div>`;
         const renderP = (author) => {
             const filtered = (p.plans||[]).filter(i => (i.author || 'parent') === author);
             return filtered.map(i => {
                 const isOwner = author === myRole;
                 if(isOwner || i.visibility === 'visible') return `<div class="list-item"><div class="item-content" onclick="${isOwner?`App.openModal('plans','${i.id}')`:''}"><div class="item-meta">${i.year}年 ${i.stage}</div><div class="item-title">${i.title}</div></div><button class="btn btn-danger btn-sm" onclick="App.deleteItem('plans','${i.id}')">削除</button></div>`;
-                return `<div class="list-item">🔒 内容は非公開 <button class="btn btn-primary btn-sm" onclick="App.requestAccess('${i.id}')">${i.visibility==='requested'?'要請中':'表示要請'}</button></div>`;
+                return `<div class="list-item">🔒 内容非公開 <button class="btn btn-primary btn-sm" onclick="App.requestAccess('${i.id}')">${i.visibility==='requested'?'要請中':'表示要請'}</button></div>`;
             }).join('');
         };
-        return reqHtml + `<div class="grid-2"><div class="card"><h3>自分のプラン <button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button></h3>${renderP(myRole)}</div>${p.id!=='parent_self'?`<div class="card"><h3>${myRole==='parent'?'お子様への期待':'親が設定したプラン'}</h3>${renderP(myRole==='parent'?'child':'parent')}</div>`:''}</div>`;
+        return reqHtml + `<div class="grid-2"><div class="card"><h3>🎯 プラン <button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button></h3>${renderP(myRole)}</div>${p.id!=='parent_self'?`<div class="card"><h3>${myRole==='parent'?'お子様':'保護者'}</h3>${renderP(myRole==='parent'?'child':'parent')}</div>`:''}</div>`;
     }
+
     if(tab === 'settings') {
-      const lastSyncStr = this.data.settings.lastSync ? new Date(this.data.settings.lastSync).toLocaleString() : '未同期';
       return `
-        <div class="card">
-          <h3>セキュリティ設定</h3>
-          <p style="font-size:12px; color:var(--text-sub);">ログインパスワードを更新します。空欄の場合はパスワードなしになります。</p>
-          <div class="grid-2">
-            <input type="password" id="new-sys-pwd" placeholder="新しいパスワードを入力">
-            <button class="btn btn-primary" onclick="const v=document.getElementById('new-sys-pwd').value; App.data.settings.password=v; App.saveData(); App.showAlert('パスワードを更新しました。');">パスワード変更</button>
-          </div>
+        <div class="card"><h3>${p.name} のパスワード設定</h3>
+          <p style="font-size:12px; color:var(--text-sub);">このプロフィール専用のパスワードです。空欄にすると認証なしでログインできます。</p>
+          <div class="grid-2"><input type="password" id="profile-pwd" placeholder="新パスワード" value="${p.password||''}">
+          <button class="btn btn-primary" onclick="const v=document.getElementById('profile-pwd').value; App.getProfile().password=v; App.saveData(); App.showAlert('パスワードを更新しました。');">更新</button></div>
         </div>
-        <div class="card" style="background:#e0f2fe;">
-          <h3>Google クラウド同期</h3>
-          <div id="google-auth-area"><button class="btn btn-google btn-full" onclick="window.CloudSync.login()">アカウントを連携する</button></div>
-          <div style="margin-top:10px; font-size:12px; color:var(--text-sub);">最終同期：${lastSyncStr}</div>
-          <div class="grid-2" style="margin-top:10px;">
-            <button class="btn btn-primary" onclick="App.triggerBackgroundSync()">今すぐバックアップ</button>
-            <button class="btn btn-success" onclick="App.triggerCloudRestore()">クラウドから復元</button>
-          </div>
+        <div class="card" style="background:#e0f2fe;"><h3>Google クラウド同期</h3>
+          <div id="google-auth-area"><button class="btn btn-google btn-full" onclick="window.CloudSync.login()">連携する</button></div>
+          <div class="grid-2" style="margin-top:10px;"><button class="btn btn-primary" onclick="App.triggerBackgroundSync()">同期</button><button class="btn btn-success" onclick="App.triggerCloudRestore()">クラウド復元</button></div>
         </div>
-        <div class="card" style="background:#fffbeb;">
-          <h3>JIS 履歴書出力設定</h3>
-          <p style="font-size:12px; color:var(--text-sub);">出力したい項目にチェックを入れ、通勤時間を入力してください。</p>
-          <div class="export-check-list" id="export-history-list">${p.history.map(i=>`<div class="export-check-item"><input type="checkbox" id="chk_${i.id}" value="${i.id}" checked><label for="chk_${i.id}">${i.year}年: ${i.title}</label></div>`).join('')}</div>
-          <div class="grid-2"><div>時<input type="number" id="export-commute-hr" value="${p.basic.commuteHour||0}"></div><div>分<input type="number" id="export-commute-min" value="${p.basic.commuteMinute||0}"></div></div>
-          <button class="btn btn-primary btn-full" onclick="App.triggerPrintMode()">JIS履歴書を作成</button>
+        <div class="card" style="background:#fffbeb;"><h3>JIS 履歴書出力</h3>
+          <div class="grid-2"><div>時<input type="number" id="export-commute-hr" value="${b.commuteHour||0}" min="0" max="23"></div><div>分<input type="number" id="export-commute-min" value="${b.commuteMinute||0}" min="0" max="59"></div></div>
+          <button class="btn btn-primary btn-full" onclick="App.triggerPrintMode()">履歴書を作成</button>
         </div>
-        <div class="card" style="border-color:var(--danger); background:#fff1f2;">
-          <h3 style="color:var(--danger);">メンテナンス</h3>
-          <button class="btn btn-danger btn-full" onclick="App.clearAllData()">⚠️ すべてのデータを削除 (初期化)</button>
-        </div>
-        <div class="card" style="font-size:12px; color:var(--text-sub);">
-          <h3 style="margin-top:0;">免責事項</h3>
-          <p>本アプリケーションの利用によって生じた損害等について、開発者は一切の責任を負いません。本アプリはブラウザのLocalStorageを使用しており、シークレットモードやキャッシュ削除によりデータが消える可能性があります。定期的なバックアップを推奨します。<br><br>Producer: M.K(TW)</p>
-        </div>`;
+        <div class="card" style="border-color:var(--danger); background:#fff1f2;"><button class="btn btn-danger btn-full" onclick="App.clearAllData()">⚠️ 全データを初期化</button></div>
+        <div class="card" style="font-size:11px; color:#999;"><h3 style="margin:0;">免責事項</h3><p>本アプリの利用による損害について開発者は一切責任を負いません。定期的なバックアップを推奨します。<br>Producer: M.K(TW)</p></div>`;
     }
   },
 
@@ -452,60 +432,44 @@ const App = {
     const items = this.getProfile()[cat] || [];
     let html = `<div class="card"><h3>${title} <button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button></h3>`;
     items.forEach(i => {
-      html += `<div class="list-item"><div class="item-content" onclick="App.openModal('${cat}', '${i.id}')"><div class="item-meta">${i.year}年 ${i.stage||''}</div><div class="item-title">${i.title}</div></div><div class="photo-wrapper">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="App.deleteItemPhoto('${cat}','${i.id}')">` : `<button class="btn btn-secondary btn-sm" onclick="App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`}</div><button class="btn btn-danger btn-sm" onclick="App.deleteItem('${cat}','${i.id}')">削除</button></div>`;
+      html += `<div class="list-item"><div class="item-content" onclick="App.openModal('${cat}', '${i.id}')"><div class="item-meta">${i.year}年 ${i.stage||''} ${i.eduStatus?`[${i.eduStatus}]`:''}</div><div class="item-title">${i.title}</div></div><div class="photo-wrapper">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="App.deleteItemPhoto('${cat}','${i.id}')">` : `<button class="btn btn-secondary btn-sm" onclick="App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`}</div><button class="btn btn-danger btn-sm" onclick="App.deleteItem('${cat}','${i.id}')">削除</button></div>`;
     });
-    if(cat === 'skills') html += `<textarea rows="3" onchange="App.updateBasic('motivation', this.value)" placeholder="志望の動機、特技、アピールポイントなど">${this.getProfile().basic.motivation||''}</textarea>`;
+    if(cat === 'skills') html += `<textarea rows="3" onchange="App.updateBasic('motivation', this.value)" placeholder="志望動機、特技、アピールポイント">${this.getProfile().basic.motivation||''}</textarea>`;
     return html + `</div>`;
   },
 
   templateModal() {
     const ctx = this.state.modalContext; const p = this.getProfile(); const isNew = ctx.itemId === null;
     const item = isNew ? {} : p[ctx.category].find(i => i.id === ctx.itemId);
-    return `<div class="modal-overlay overlay"><div class="modal-box"><h3>${isNew?'新規追加':'編集'}</h3><label>ライフステージ</label><select id="mod-stage">${['幼少','小教','中教','高教','大学','社会','壮年','共通'].map(s => `<option value="${s}" ${item.stage===s?'selected':''}>${s}</option>`).join('')}</select><div class="grid-2"><div><label>年 (西暦)</label><input type="number" id="mod-year" value="${item.year||''}" placeholder="2025"></div><div><label>月</label><input type="number" id="mod-month" value="${item.month||''}" placeholder="3"></div></div><label>内容</label><input type="text" id="mod-title" value="${item.title||''}" placeholder="入力してください"><label>備考</label><textarea id="mod-desc" rows="4">${item.desc||''}</textarea><div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
+    return `<div class="modal-overlay overlay"><div class="modal-box"><h3>${isNew?'追加':'編集'}</h3><label>時期</label><select id="mod-stage">${['幼少','小教','中教','高教','大学','社会','壮年','共通'].map(s => `<option value="${s}" ${item.stage===s?'selected':''}>${s}</option>`).join('')}</select>${ctx.category==='history'?`<label>状態</label><select id="mod-edu-status"><option value="入学">入学</option><option value="卒業">卒業</option><option value="肄業">肄業</option></select>`:''}<div class="grid-2"><input type="number" id="mod-year" value="${item.year||'2025'}" placeholder="年"><input type="number" id="mod-month" value="${item.month||'4'}" placeholder="月"></div><input type="text" id="mod-title" value="${item.title||''}" placeholder="タイトル"><textarea id="mod-desc" rows="4" placeholder="詳細">${item.desc||''}</textarea><div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
   },
 
   triggerPrintMode() {
-    const getCheck = (id) => Array.from(document.getElementById(id).querySelectorAll('input:checked')).map(i => i.value);
-    this.state.printFilter = { history: getCheck('export-history-list') };
-    const hr = document.getElementById('export-commute-hr'), min = document.getElementById('export-commute-min');
-    if(hr) this.getProfile().basic.commuteHour = hr.value; if(min) this.getProfile().basic.commuteMinute = min.value;
+    const hr = parseInt(document.getElementById('export-commute-hr').value); const min = parseInt(document.getElementById('export-commute-min').value);
+    if(hr < 0 || hr > 23 || min < 0 || min > 59) { this.showAlert("時間は0-23、分は0-59で入力してください。"); return; }
+    this.getProfile().basic.commuteHour = hr; this.getProfile().basic.commuteMinute = min;
     this.saveData(); this.state.view = 'preview'; this.render();
     setTimeout(() => window.print(), 800);
   },
 
   templatePrintPreview() {
-    const p = this.getProfile(); const b = p.basic; const fIds = this.state.printFilter || { history:[] };
-    const hItems = p.history.filter(i => fIds.history.includes(i.id)).sort((a,b)=>a.year-b.year);
+    const p = this.getProfile(); const b = p.basic; const hItems = [...p.history].sort((a,b)=>a.year-b.year);
     const age = b.birthday ? Math.floor((Date.now() - new Date(b.birthday).getTime()) / 31557600000) : 0;
-    const commute = `約 ${b.commuteHour||0} 時間 ${b.commuteMinute||0} 分`;
     const buildRows = (items, min) => {
-        let h = items.map(i => `<tr><td class="txt-center">${i.year}</td><td class="txt-center">${i.month}</td><td>${i.title}</td></tr>`).join('');
+        let h = items.map(i => `<tr><td class="txt-center">${i.year}</td><td class="txt-center">${i.month}</td><td>${i.title} ${i.eduStatus||''}</td></tr>`).join('');
         for(let k=items.length; k<min; k++) h += `<tr><td>&nbsp;</td><td></td><td></td></tr>`; return h;
     };
-    return `<div class="resume-preview-wrapper"><div class="print-actions"><button class="btn btn-secondary" onclick="App.state.view='app'; App.render()">戻る</button><button class="btn btn-primary" onclick="window.print()">印刷</button></div>
-    <div id="jis-resume-page">
-      <div style="display:flex; justify-content:space-between; border-bottom:2px solid black;"><h1>履 歴 書</h1><span>${new Date().toLocaleDateString()} 現在</span></div>
-      <table class="jis-table">
-        <tr><td colspan="4" class="border-dash">ふりがな: ${b.furigana}</td><td rowspan="4" class="txt-center" style="width:40mm;">${b.photo?`<img src="${b.photo}" style="width:100%; height:100%; object-fit:cover;">`:'写真貼付'}</td></tr>
-        <tr><td colspan="4" style="font-size:24pt; font-weight:bold; height:18mm;">${p.name}</td></tr>
-        <tr><td colspan="4">${b.birthday} 生 (満 ${age} 歳) / 性別: ${b.gender==='male'?'男':'女'}</td></tr>
-        <tr><td colspan="4">現住所: ${b.address}</td></tr>
-        <tr><td colspan="5">電話: ${b.phone} / Email: ${b.email}</td></tr>
-      </table>
-      <table class="jis-table"><tr style="background:#eee;"><th>年</th><th>月</th><th>学歴・職歴 (各別にまとめて書く)</th></tr>${buildRows(hItems, 10)}</table>
-      <table class="jis-table"><tr style="background:#eee;"><th>年</th><th>月</th><th>免許・資格</th></tr>${buildRows(p.skills, 6)}</table>
-      <table class="jis-table"><tr><td style="height:30mm; vertical-align:top;"><b>志望の動機、特技、アピールポイント</b><br>${b.motivation||''}</td></tr></table>
-      <table class="jis-table"><tr><td width="50%">通勤時間: ${commute}</td><td>扶養家族数: ${b.dependents}人 / 配偶者: ${b.spouse==='yes'?'有':'無'}</td></tr></table>
-    </div></div>`;
+    return `<div class="resume-preview-wrapper" style="background:#52525b; padding:20px 0; min-height:100vh;"><div class="print-actions" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:10px;"><button class="btn btn-secondary" onclick="App.state.view='app'; App.render()">戻る</button><button class="btn btn-primary" onclick="window.print()">印刷</button></div><div id="jis-resume-page" style="background:white; width:210mm; min-height:297mm; margin:0 auto; padding:10mm;"><div style="display:flex; justify-content:space-between; border-bottom:2px solid black;"><h1>履 歴 書</h1><span>${new Date().toLocaleDateString()} 現在</span></div><table class="jis-table"><tr><td colspan="4">ふりがな: ${b.furigana}</td><td rowspan="4" class="txt-center" style="width:40mm;">${b.photo?`<img src="${b.photo}" style="width:100%; height:100%; object-fit:cover;">`:'写真貼付'}</td></tr><tr><td colspan="4" style="font-size:24pt; font-weight:bold; height:18mm;">${p.name}</td></tr><tr><td colspan="4">${b.birthday} 生 (満 ${age} 歳)</td></tr><tr><td colspan="4">住所: ${b.address}</td></tr></table><table class="jis-table"><tr style="background:#eee;"><th>年</th><th>月</th><th>学歴・職歴</th></tr>${buildRows(hItems, 10)}</table><table class="jis-table"><tr style="background:#eee;"><th>年</th><th>月</th><th>免許・資格</th></tr>${buildRows(p.skills, 6)}</table><table class="jis-table"><tr><td style="height:30mm; vertical-align:top;"><b>志望動機等</b><br>${b.motivation||''}</td></tr></table><table class="jis-table"><tr><td>通勤時間: 約 ${b.commuteHour} 時間 ${b.commuteMinute} 分</td><td>扶養家族: ${b.dependents}人 / 配偶者: ${b.spouse==='yes'?'有':'無'}</td></tr></table></div></div>`;
   },
 
   templateDialog() {
-    const d = this.state.dialog; const inp = d.type === 'prompt' ? `<input type="text" id="dialog-input" style="width:100%; margin-top:15px; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">` : '';
+    const d = this.state.dialog; const inp = d.type === 'prompt' ? `<input type="text" id="dialog-input" style="width:100%; margin-top:15px; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">` : '';
     const btns = d.type === 'alert' ? `<button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm()">確認</button>` : `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog.onCancel()">キャンセル</button><button class="btn btn-primary btn-full" onclick="const v=document.getElementById('dialog-input'); App.state.dialog.onConfirm(v?v.value:null)">確定</button></div>`;
     return `<div class="custom-dialog-overlay"><div class="custom-dialog-box"><h3>${d.message}</h3>${inp}<div style="margin-top:20px;">${btns}</div></div></div>`;
   },
 
-  deleteItemPhoto(cat, id) { this.showConfirm("写真を削除しますか？", () => { const i=this.getProfile()[cat].find(x=>x.id===id); if(i) i.photo=null; this.saveData(); }); }
+  deleteItemPhoto(cat, id) { this.showConfirm("写真を削除しますか？", () => { const i=this.getProfile()[cat].find(x=>x.id===id); if(i) i.photo=null; this.saveData(); }); },
+  clearAllData() { this.showConfirm("全データを初期化しますか？", () => { localStorage.removeItem(this.DB_KEY); location.reload(); }); }
 };
 window.onload = () => App.init();
 </script>
@@ -513,7 +477,7 @@ window.onload = () => App.init();
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-  import { getFirestore as getFS, doc as dFS, setDoc as sFS, getDoc as gFS, serverTimestamp as tsFS } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
   const fbConfig = {
     "apiKey": "AIzaSyCU8FG-bGYIm5eX3RbEUNK8_UO3k1oXwyw",
@@ -525,34 +489,41 @@ window.onload = () => App.init();
     "measurementId": "G-FCV4JLFVX8"
   };
 
-  const app = initializeApp(fbConfig); const auth = getAuth(app); const db = getFS(app); const provider = new GoogleAuthProvider();
+  const app = initializeApp(fbConfig); const auth = getAuth(app); const db = getFirestore(app); const provider = new GoogleAuthProvider();
 
-  window.CloudSync = { isLoggedIn: false };
-  onAuthStateChanged(auth, (u) => { if(u) { window.CloudSync.isLoggedIn = true; App.render(); App.updateSyncIndicator(); } });
+  window.CloudSync = { isLoggedIn: false, user: null };
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      window.CloudSync.isLoggedIn = true;
+      window.CloudSync.user = user;
+      App.render();
+    }
+  });
+
   window.CloudSync.login = () => signInWithPopup(auth, provider).catch(e => alert(e.message));
   
   window.CloudSync.loginRestore = async () => {
     try {
         const result = await signInWithPopup(auth, provider);
-        const s = await gFS(dFS(db, 'users', result.user.uid, 'life_resume', 'mainData')); 
+        const s = await getDoc(doc(db, 'users', result.user.uid, 'life_resume', 'mainData')); 
         if(s.exists()) {
             localStorage.setItem('LIFE_RESUME_V12_DB', JSON.stringify(JSON.parse(s.data().data)));
-            alert("復元完了。再読み込みします。");
-            location.reload();
-        } else { alert("バックアップが見つかりません。"); }
-    } catch(e) { alert("エラー: " + e.message); }
+            alert("復元完了。"); location.reload();
+        } else { alert("データがありません"); }
+    } catch(e) { alert(e.message); }
   };
 
   window.CloudSync.backup = async (d) => {
-    try { await sFS(dFS(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData'), { data: JSON.stringify(d), ts: tsFS() }); return {success:true}; }
+    if(!auth.currentUser) return {success:false};
+    try { await setDoc(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData'), { data: JSON.stringify(d), ts: serverTimestamp() }); return {success:true}; }
     catch(e){ return {success:false, msg:e.message}; }
   };
   
   window.CloudSync.restore = async () => {
-    try { 
-        const s = await gFS(dFS(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData')); 
-        return s.exists() ? {success:true, data:JSON.parse(s.data().data)} : {success:false, msg: "データなし"}; 
-    } catch(e) { return {success:false, msg:e.message}; }
+    if(!auth.currentUser) return {success:false};
+    try { const s = await getDoc(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData')); return s.exists() ? {success:true, data:JSON.parse(s.data().data)} : {success:false}; } 
+    catch(e) { return {success:false, msg:e.message}; }
   };
 </script>
 </body>
