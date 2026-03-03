@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>人生履歴書 V16.2 (Sync Conflict & Auth Fix)</title>
+  <title>人生履歴書 V16.3 (Real-time Co-edit & UI Fix)</title>
   
   <!-- Chart.js for Radar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -163,8 +163,8 @@ const manifestStr = JSON.stringify({
 document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="data:application/manifest+json;charset=utf-8,${encodeURIComponent(manifestStr)}">`);
 
 /**
- * 人生履歴書 核心エンジン (V16.2)
- * 修正點：Google ログイン時の上書き防止(競合解決)、アカウント切替の強制
+ * 人生履歴書 核心エンジン (V16.3)
+ * 重大更新：リアルタイム同期エンジン (onSnapshot)、UI再描画の即時反映バグ修正
  */
 const STAGES = ['乳幼児期 (0-6歳)', '小学生 (7-12歳)', '中学生 (13-15歳)', '高校生 (16-18歳)', '大学/専門 (19-22歳)', '20代 (若手社会人)', '30代 (中堅)', '40代以降', '全期間共通'];
 const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニケーション', '専門資格'];
@@ -212,15 +212,22 @@ const App = {
 
   saveData() {
     try {
+      if(!window.CloudSync?.isPulling) {
+          const p = this.getProfile();
+          if(p) p._lastUpdate = Date.now(); // 標記最新編輯時間，供雲端判斷
+      }
       localStorage.setItem(this.DB_KEY, JSON.stringify(this.data));
-      // 若已登入且未被強制暫停同步，則背景上傳
-      if(window.CloudSync?.isLoggedIn && !window.CloudSync.pauseSync) {
-          this.triggerBackgroundSync();
+      
+      // 使用防抖動(Debounce)進行背景同步，防止過度請求
+      if(window.CloudSync?.isLoggedIn && !window.CloudSync.pauseSync && !window.CloudSync.isPulling) {
+          clearTimeout(window.CloudSync.syncTimeout);
+          window.CloudSync.syncTimeout = setTimeout(() => {
+              this.triggerBackgroundSync();
+          }, 800);
       }
     } catch (e) { this.showAlert('ストレージ不足です。画像を減らしてください。'); }
   },
 
-  // 判斷目前本機資料是否為「完全空白的預設狀態」
   isLocalDefault() {
       const keys = Object.keys(this.data.profiles);
       if (keys.length > 1) return false;
@@ -231,7 +238,6 @@ const App = {
       return true;
   },
 
-  // 解決雲端與本機的衝突
   resolveConflict(choice) {
       if (choice === 'cloud') {
           this.data = this.state.dialog.cloudData;
@@ -250,19 +256,31 @@ const App = {
 
   async triggerBackgroundSync() {
     if(this.state.isSyncing) return;
-    this.state.isSyncing = true; this.render();
+    this.state.isSyncing = true; this.updateHeaderSyncUI();
+    
+    // 1. 同步主帳號資料
+    window.CloudSync.isPushingMain = true;
+    this.data.settings.lastSync = Date.now();
     const res = await window.CloudSync.backup(this.data);
+    
+    // 2. 同步獨立家族分享包 (如果有共享碼的話)
+    const sharedPromises = Object.values(this.data.profiles)
+        .filter(p => p.shareCode)
+        .map(async p => {
+            window.CloudSync.isPushingShared = p.shareCode;
+            try { await window.CloudSync.updateSharedProfile(p); } catch(e) {}
+            setTimeout(() => window.CloudSync.isPushingShared = null, 1500); // 防回音
+        });
+    await Promise.all(sharedPromises);
+
+    setTimeout(() => window.CloudSync.isPushingMain = false, 1500);
     this.state.isSyncing = false;
-    if(res.success) { 
-        this.data.settings.lastSync = Date.now(); 
-        localStorage.setItem(this.DB_KEY, JSON.stringify(this.data)); 
-    }
-    this.render();
+    if(res.success) { localStorage.setItem(this.DB_KEY, JSON.stringify(this.data)); }
+    this.updateHeaderSyncUI();
   },
 
   getProfile() { return this.data.profiles[this.state.activeProfileId]; },
 
-  // UI 彈窗
   showAlert(message) { this.state.dialog = { type: 'alert', message, onConfirm: () => { this.state.dialog = null; this.render(); } }; this.render(); },
   showConfirm(message, onConfirmCallback) { this.state.dialog = { type: 'confirm', message, onConfirm: () => { this.state.dialog = null; onConfirmCallback(); this.render(); }, onCancel: () => { this.state.dialog = null; this.render(); } }; this.render(); },
   showPrompt(message, onConfirmCallback) { this.state.dialog = { type: 'prompt', message, onConfirm: (val) => { this.state.dialog = null; if(val !== null) onConfirmCallback(val); this.render(); }, onCancel: () => { this.state.dialog = null; this.render(); } }; this.render(); },
@@ -279,11 +297,7 @@ const App = {
     this.state.activeProfileId = roleId; this.state.view = 'app'; this.render();
   },
   
-  logout() { 
-    this.state.view = 'login'; 
-    this.state.loginRole = ''; 
-    this.render(); 
-  },
+  logout() { this.state.view = 'login'; this.state.loginRole = ''; this.render(); },
 
   addChild() {
     this.showPrompt("お子様の名前を入力：", (name) => {
@@ -301,10 +315,13 @@ const App = {
   },
 
   switchProfile(id) { if(this.data.profiles[id]) { this.state.activeProfileId = id; this.render(); } },
+  
+  // FIX: 新增 this.render() 確保修改後立即刷新畫面
   updateBasic(field, value) { 
     if(field === 'birthday' && value > new Date().toISOString().split('T')[0]) { this.showAlert("未来の日付は設定できません。"); return; }
-    this.getProfile().basic[field] = value; this.saveData(); 
+    this.getProfile().basic[field] = value; this.saveData(); this.render();
   },
+  
   updateName(value) { this.getProfile().name = value; this.saveData(); this.render(); },
 
   processImage(file, callback) {
@@ -382,7 +399,7 @@ const App = {
   grantAccess(itemId) { const item = this.getProfile().plans.find(i => i.id === itemId); if(item) { item.visibility = 'visible'; this.saveData(); this.render(); } },
   requestAccess(itemId) { const item = this.getProfile().plans.find(i => i.id === itemId); if(item) { item.visibility = 'requested'; this.saveData(); this.render(); this.showAlert('表示リクエストを送信しました。'); } },
 
-  /* === 遊客本機資料復原/匯出 (Guest Offline Restore) === */
+  /* === 遊客本機資料復原/匯出 === */
   exportLocalData() {
     const blob = new Blob([JSON.stringify(this.data)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -406,26 +423,32 @@ const App = {
     });
   },
 
-  /* === 家族傳承與共享 (Family Transfer) === */
+  /* === 家族傳承與實時共享 (Real-time Family Co-edit) === */
   async generateShareCode() {
     if(!window.CloudSync?.isLoggedIn) { this.showAlert('共有機能を使用するには、まずGoogleアカウントを連携してください。'); return; }
     const pId = document.getElementById('share-profile-select').value;
     const profileToShare = this.data.profiles[pId];
     if(!profileToShare) return;
     
+    // 分配一個全域共享碼，以便後續建立即時監聽連線
+    if (!profileToShare.shareCode) {
+        profileToShare.shareCode = Math.random().toString(36).substr(2, 9).toUpperCase();
+    }
+    profileToShare._lastUpdate = Date.now();
+    this.saveData();
+
     this.state.dialog = { type: 'loading', message: '共有リンクを生成中...\n(Googleクラウドと通信しています)' }; 
     this.render();
 
     const res = await window.CloudSync.createShareLink(profileToShare);
     if(res.success) {
+        if(window.CloudSync.isLoggedIn) window.CloudSync.listenToSharedProfiles(); // 啟動即時監聽
         this.state.dialog = null;
-        this.showPrompt(`データの準備が完了しました。\n以下の「共有コード」をコピーして、受け取り側の端末で入力してください。\n\n【共有コード】`, () => {});
+        this.showPrompt(`データの準備が完了しました。リアルタイムで共同編集が可能です。\n以下の「共有コード」をコピーして、受け取り側の端末で入力してください。\n\n【共有コード】`, () => {});
         setTimeout(() => { const inp = document.getElementById('dialog-input'); if(inp){ inp.value = res.code; inp.select(); } }, 100);
     } else {
         let errorMsg = res.msg;
-        if(errorMsg && errorMsg.includes("Missing or insufficient permissions")) {
-            errorMsg = "Firebaseのアクセス権限がありません。\nFirestore Databaseの「Rules(ルール)」を開き、アクセスを許可するように設定してください。";
-        }
+        if(errorMsg && errorMsg.includes("Missing or insufficient permissions")) errorMsg = "Firebaseのアクセス権限がありません。";
         this.showAlert(`共有リンクの生成に失敗しました。\n\n詳細: ${errorMsg}`);
     }
   },
@@ -443,14 +466,11 @@ const App = {
           this.state.dialog = { 
               type: 'confirm_import', 
               profile: importedProfile,
-              message: `「${importedProfile.name}」のデータが見つかりました。\nどのように登録しますか？`
+              message: `「${importedProfile.name}」のデータが見つかりました。\nどのように登録しますか？\n(登録後はリアルタイムで共同編集されます)`
           };
           this.render();
       } else {
           let errorMsg = res.msg || "共有データが見つからないか、期限切れです。";
-          if(errorMsg && errorMsg.includes("Missing or insufficient permissions")) {
-              errorMsg = "Firebaseのアクセス権限がありません。\nFirestore Databaseの「Rules(ルール)」を開き、アクセスを許可するように設定してください。";
-          }
           this.showAlert(errorMsg);
       }
   },
@@ -460,14 +480,16 @@ const App = {
           const newId = 'child_' + Date.now();
           profile.id = newId; profile.role = 'child';
           this.data.profiles[newId] = profile;
-          this.showAlert(`「${profile.name}」をお子様として追加しました！`);
+          this.showAlert(`「${profile.name}」をお子様として追加し、共同編集を開始しました！`);
       } else {
           profile.id = 'parent_self'; profile.role = 'parent';
           this.data.profiles['parent_self'] = profile;
           this.state.activeProfileId = 'parent_self';
-          this.showAlert(`データを本人の記録として引き継ぎました！`);
+          this.showAlert(`データを本人の記録として引き継ぎ、共同編集を開始しました！`);
       }
-      this.saveData(); this.state.dialog = null; this.render();
+      this.saveData(); 
+      if(window.CloudSync.isLoggedIn) window.CloudSync.listenToSharedProfiles(); // 啟動即時監聽
+      this.state.dialog = null; this.render();
   },
 
   // 核心渲染
@@ -537,7 +559,7 @@ const App = {
     } else if (d.type === 'confirm') {
         btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog.onCancel()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm()">確定</button></div>`;
     } else if (d.type === 'complete_plan') {
-        inputHtml = `<select id="complete-cat-select" style="width:100%; margin-top:15px;"><option value="history">学歴・職歴</option><option value="skills">免許・資格</option><option value="achievements">表彰・出来事</option></select>`;
+        inputHtml = `<select id="complete-cat-select" style="width:100%; margin-top:15px; padding:12px; border-radius:8px;"><option value="history">学歴・職歴</option><option value="skills">免許・資格</option><option value="achievements">表彰・出来事</option></select>`;
         btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button><button class="btn btn-success btn-full" onclick="App.confirmCompletePlan('${d.planId}', document.getElementById('complete-cat-select').value)">実績に追加</button></div>`;
     } else if (d.type === 'confirm_import') {
         btns = `<div style="display:flex; flex-direction:column; gap:10px;"><button class="btn btn-primary btn-full" onclick="App.executeImport(App.state.dialog.profile, 'child')">👨‍👩‍👦 お子様として追加 (共同管理)</button><button class="btn btn-danger btn-full" onclick="App.executeImport(App.state.dialog.profile, 'parent')">🔄 本人の記録として上書き (引き継ぎ)</button><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button></div>`;
@@ -556,9 +578,8 @@ const App = {
   templateLogin() {
     const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
     
-    // 如果尚未選擇角色，顯示首頁選項 (Main Entry)
     if (!this.state.loginRole) {
-      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V16.2</h2>
+      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V16.3</h2>
       <button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.setLoginRole('parent')">本人ログイン</button>
       ${childrenIds.length > 0 ? `<button class="btn btn-secondary btn-full" style="padding:15px;" onclick="App.setLoginRole('child')">お子様ログイン</button>` : ''}
       
@@ -570,7 +591,6 @@ const App = {
       </div></div></div>`;
     }
 
-    // 驗證密碼畫面 (Auth Screen)
     const targetId = this.state.loginRole === 'parent' ? 'parent_self' : (this.state.loginChildId || childrenIds[0]);
     if(this.state.loginRole === 'child' && !this.state.loginChildId) this.state.loginChildId = targetId;
     
@@ -696,7 +716,7 @@ const App = {
 
     if(tab === 'settings') {
       return `
-        <div class="card" style="border-top:4px solid var(--primary);"><h3>🤝 家族共有・データ引き継ぎ</h3>
+        <div class="card" style="border-top:4px solid var(--primary);"><h3>🤝 家族共有・リアルタイム共同編集</h3>
           <p style="font-size:12px; color:var(--text-sub);">共有コードを発行し、他の家族のGoogleアカウントへデータを転送・共有できます。</p>
           <div class="grid-2" style="margin-bottom:15px;">
             <select id="share-profile-select"><option value="${p.id}">${p.name} のデータを共有</option></select>
@@ -729,7 +749,7 @@ const App = {
         </div>
 
         <div class="card" style="background:#f8fafc;"><h3>💾 ローカルバックアップ (ゲスト用)</h3>
-          <p style="font-size:12px; color:var(--text-sub);">手動でローカルに保存・復元できます。</p>
+          <p style="font-size:12px; color:var(--text-sub);">Google同期を使用しない場合、手動でローカルに保存・復元できます。</p>
           <div class="grid-2">
             <button class="btn btn-secondary" onclick="App.exportLocalData()">エクスポート (.json)</button>
             <button class="btn btn-secondary" onclick="document.getElementById('inp-import-json').click()">インポート (.json)</button>
@@ -818,16 +838,25 @@ const App = {
       </div></div>`;
   },
 
-  deleteItemPhoto(cat, id) { this.showConfirm("写真を削除しますか？", () => { const i=this.getProfile()[cat].find(x=>x.id===id); if(i) i.photo=null; this.saveData(); }); },
+  // FIX: 刪除照片後，強制刷新 UI 
+  deleteItemPhoto(cat, id) { 
+    this.showConfirm("写真を削除しますか？", () => { 
+        const i=this.getProfile()[cat].find(x=>x.id===id); 
+        if(i) i.photo=null; 
+        this.saveData(); 
+        this.render(); 
+    }); 
+  },
   clearAllData() { this.showConfirm("【警告】すべてのデータを完全に消去します。元に戻せません。", () => { localStorage.removeItem(this.DB_KEY); location.reload(); }); }
 };
+
 window.onload = () => App.init();
 </script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
   const fbConfig = {
     "apiKey": "AIzaSyCU8FG-bGYIm5eX3RbEUNK8_UO3k1oXwyw",
@@ -839,18 +868,15 @@ window.onload = () => App.init();
   };
 
   const app = initializeApp(fbConfig); const auth = getAuth(app); const db = getFirestore(app); 
-  
-  // 核心修正 2: 設置 Google Auth Provider 強制每次登入都選擇帳號
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
 
-  window.CloudSync = { isLoggedIn: false, user: null, pauseSync: false };
+  window.CloudSync = { isLoggedIn: false, user: null, pauseSync: false, isPulling: false, isPushingMain: false, isPushingShared: null, unsubShared: {} };
 
   onAuthStateChanged(auth, async (user) => {
     if (user) { 
       window.CloudSync.isLoggedIn = true; window.CloudSync.user = user; 
       
-      // 核心修正 1: 自動防衝突 (Auto-pull on empty cache to prevent wiping cloud)
       if(App.isLocalDefault()) {
           try {
               const s = await getDoc(doc(db, 'users', user.uid, 'life_resume', 'mainData'));
@@ -861,12 +887,65 @@ window.onload = () => App.init();
           } catch(e) {}
       }
       
+      // 啟動實時監聽 (Real-time Co-editing Sync)
+      window.CloudSync.listenToMainData();
+      window.CloudSync.listenToSharedProfiles();
+
       if(typeof App !== 'undefined' && App.render) App.render();
     } else {
       window.CloudSync.isLoggedIn = false; window.CloudSync.user = null;
+      if(window.CloudSync.unsubMain) window.CloudSync.unsubMain();
+      Object.keys(window.CloudSync.unsubShared).forEach(k => window.CloudSync.unsubShared[k]());
+      window.CloudSync.unsubShared = {};
+      
       if(typeof App !== 'undefined' && App.render) App.render();
     }
   });
+
+  // 主資料實時監聽 (同帳號跨設備)
+  window.CloudSync.listenToMainData = () => {
+      if(window.CloudSync.unsubMain) return; 
+      window.CloudSync.unsubMain = onSnapshot(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData'), (s) => {
+          if (window.CloudSync.isPushingMain || window.CloudSync.pauseSync) return;
+          if(s.exists()) {
+              const cloudData = JSON.parse(s.data().data);
+              if (cloudData.settings.lastSync > (App.data.settings.lastSync || 0)) {
+                  window.CloudSync.isPulling = true;
+                  App.data = cloudData;
+                  localStorage.setItem(App.DB_KEY, JSON.stringify(App.data));
+                  App.render();
+                  window.CloudSync.isPulling = false;
+                  window.CloudSync.listenToSharedProfiles(); // Refresh shared listeners
+              }
+          }
+      }, (err) => console.warn("Main sync error:", err));
+  };
+
+  // 共享家族資料實時監聽 (跨帳號共同編輯)
+  window.CloudSync.listenToSharedProfiles = () => {
+      Object.values(App.data.profiles).forEach(p => {
+          if(p.shareCode && !window.CloudSync.unsubShared[p.shareCode]) {
+              window.CloudSync.unsubShared[p.shareCode] = onSnapshot(doc(db, 'shared_profiles', p.shareCode), (s) => {
+                  if (window.CloudSync.isPushingShared === p.shareCode) return; // 避免自己覆蓋自己(Echo)
+                  if(s.exists()) {
+                      const remoteData = JSON.parse(s.data().data);
+                      const localP = App.data.profiles[p.id];
+                      // 只有雲端資料比本地新時才覆蓋
+                      if (!localP || remoteData._lastUpdate > (localP._lastUpdate || 0)) {
+                          window.CloudSync.isPulling = true;
+                          const localId = p.id;
+                          App.data.profiles[localId] = { ...remoteData, id: localId, role: localP.role }; 
+                          localStorage.setItem(App.DB_KEY, JSON.stringify(App.data));
+                          if (App.state.activeProfileId === localId) {
+                              App.render();
+                          }
+                          window.CloudSync.isPulling = false;
+                      }
+                  }
+              }, (err) => console.warn("Shared profile sync error:", err));
+          }
+      });
+  };
 
   window.CloudSync.login = async () => {
       try {
@@ -885,37 +964,25 @@ window.onload = () => App.init();
           if (s.exists()) {
               const cloudData = JSON.parse(s.data().data);
               if (App.isLocalDefault()) {
-                  // Local is empty -> Auto restore
                   App.data = cloudData;
                   localStorage.setItem(App.DB_KEY, JSON.stringify(cloudData));
                   App.state.dialog = null;
                   App.showAlert("クラウドからデータを自動復元しました。");
               } else {
-                  // Conflict detected
-                  window.CloudSync.pauseSync = true; // 暫停背景備份
-                  App.state.dialog = {
-                      type: 'sync_conflict',
-                      cloudData: cloudData,
-                      message: '⚠️ データの競合を検出しました\n\n現在の端末とクラウドの両方にデータが存在します。\nどちらのデータを優先しますか？'
-                  };
+                  window.CloudSync.pauseSync = true; 
+                  App.state.dialog = { type: 'sync_conflict', cloudData: cloudData, message: '⚠️ データの競合を検出しました\n\n現在の端末とクラウドの両方にデータが存在します。\nどちらのデータを優先しますか？' };
                   App.render();
               }
           } else {
-              // No cloud data -> Safe to push local
               App.state.dialog = null;
               App.showAlert("クラウド連携が完了しました。現在のデータをバックアップします。");
               App.triggerBackgroundSync();
           }
-      } catch(e) {
-          App.state.dialog = null;
-          App.showAlert("エラーが発生しました: " + e.message);
-      }
+      } catch(e) { App.state.dialog = null; App.showAlert("エラーが発生しました: " + e.message); }
   };
   
   window.CloudSync.logout = () => {
-      signOut(auth).then(() => {
-          App.showAlert("Googleアカウントの連携を解除しました。");
-      }).catch(e => alert(e.message));
+      signOut(auth).then(() => { App.showAlert("Googleアカウントの連携を解除しました。"); }).catch(e => alert(e.message));
   };
   
   window.CloudSync.backup = async (d) => {
@@ -924,11 +991,20 @@ window.onload = () => App.init();
     catch(e){ return {success:false, msg:e.message}; }
   };
 
-  // --- 家族傳承與共享模組 (Family Transfer) ---
+  // 單獨推送家族成員的即時變更
+  window.CloudSync.updateSharedProfile = async (profileData) => {
+      try {
+          await setDoc(doc(db, 'shared_profiles', profileData.shareCode), {
+              data: JSON.stringify(profileData),
+              ts: serverTimestamp()
+          }, { merge: true });
+      } catch(e) {}
+  };
+
   window.CloudSync.createShareLink = async (profileData) => {
       if(!auth.currentUser) return {success:false};
       try {
-          const shareCode = Math.random().toString(36).substr(2, 9).toUpperCase();
+          const shareCode = profileData.shareCode;
           await setDoc(doc(db, 'shared_profiles', shareCode), {
               ownerUid: auth.currentUser.uid,
               data: JSON.stringify(profileData),
