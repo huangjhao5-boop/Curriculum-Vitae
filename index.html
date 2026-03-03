@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>人生履歴書 V16.3 (Real-time Co-edit & UI Fix)</title>
+  <title>人生履歴書 V16.5 (Diary & Lightbox)</title>
   
   <!-- Chart.js for Radar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -21,6 +21,7 @@
       --skill-color: #10b981;
       --achieve-color: #f97316;
       --birth-color: #ec4899;
+      --diary-color: #3b82f6; /* 日記：藍色 */
       --bg-color: #f1f5f9;
       --card-bg: #ffffff;
       --text-main: #334155;
@@ -96,9 +97,13 @@
     .tl-right .tl-dot { left: -7px; }
     .tl-content { padding: 15px; background: white; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
-    .photo-thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; }
+    .photo-thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; cursor: zoom-in; }
     .profile-photo-area { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 15px; border: 1px dashed var(--border); border-radius: 8px; background: #f8fafc; }
-    .profile-photo-img { width: 100px; height: 130px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; }
+    .profile-photo-img { width: 100px; height: 130px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; cursor: zoom-in;}
+
+    /* Image Viewer (Lightbox) */
+    .image-viewer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: flex; justify-content: center; align-items: center; cursor: zoom-out; }
+    .image-viewer-img { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); object-fit: contain; }
 
     /* Export Selector */
     .export-check-list { max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: #f8fafc; margin-bottom: 10px; }
@@ -163,8 +168,8 @@ const manifestStr = JSON.stringify({
 document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="data:application/manifest+json;charset=utf-8,${encodeURIComponent(manifestStr)}">`);
 
 /**
- * 人生履歴書 核心エンジン (V16.3)
- * 重大更新：リアルタイム同期エンジン (onSnapshot)、UI再描画の即時反映バグ修正
+ * 人生履歴書 核心エンジン (V16.5)
+ * 機能追加：画像拡大(Lightbox)、メモ・日記(格言)機能のタイムライン統合
  */
 const STAGES = ['乳幼児期 (0-6歳)', '小学生 (7-12歳)', '中学生 (13-15歳)', '高校生 (16-18歳)', '大学/専門 (19-22歳)', '20代 (若手社会人)', '30代 (中堅)', '40代以降', '全期間共通'];
 const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニケーション', '専門資格'];
@@ -177,7 +182,7 @@ const App = {
       'parent_self': {
         id: 'parent_self', name: '本人', role: 'parent', password: '',
         basic: { furigana: '', gender: 'male', birthday: '', postalCode: '', address: '', phone: '', email: '', spouse: 'no', dependents: 0, commuteHour: 0, commuteMinute: 0, motivation: '', photo: null },
-        history: [], skills: [], achievements: [], events: [], plans: []
+        history: [], skills: [], achievements: [], events: [], plans: [], diary: []
       }
     }
   },
@@ -185,7 +190,7 @@ const App = {
   state: {
     view: 'login', loginRole: '', activeProfileId: 'parent_self', activeTab: 'overview',
     modalContext: null, dialog: null, isSyncing: false, printFilter: null,
-    loginChildId: ''
+    loginChildId: '', viewImageSrc: null // Lightbox 用 state
   },
 
   chartInstance: null,
@@ -205,6 +210,7 @@ const App = {
           Object.values(this.data.profiles).forEach(p => {
              if(p.plans) p.plans.forEach(pl => { if(!pl.status) pl.status = 'active'; });
              if(p.skills) p.skills.forEach(sk => { if(!sk.dim) sk.dim = '専門資格'; });
+             if(!p.diary) p.diary = []; // 確保日記陣列存在
           });
       }
     } catch(e) { console.error("Load Error", e); }
@@ -214,11 +220,10 @@ const App = {
     try {
       if(!window.CloudSync?.isPulling) {
           const p = this.getProfile();
-          if(p) p._lastUpdate = Date.now(); // 標記最新編輯時間，供雲端判斷
+          if(p) p._lastUpdate = Date.now();
       }
       localStorage.setItem(this.DB_KEY, JSON.stringify(this.data));
       
-      // 使用防抖動(Debounce)進行背景同步，防止過度請求
       if(window.CloudSync?.isLoggedIn && !window.CloudSync.pauseSync && !window.CloudSync.isPulling) {
           clearTimeout(window.CloudSync.syncTimeout);
           window.CloudSync.syncTimeout = setTimeout(() => {
@@ -233,7 +238,7 @@ const App = {
       if (keys.length > 1) return false;
       const p = this.data.profiles['parent_self'];
       if (!p || p.name !== '本人') return false;
-      if (p.history.length > 0 || p.skills.length > 0 || p.plans.length > 0 || p.achievements.length > 0) return false;
+      if (p.history.length > 0 || p.skills.length > 0 || p.plans.length > 0 || p.achievements.length > 0 || p.diary.length > 0) return false;
       if (p.basic.birthday || p.basic.photo || p.basic.phone || p.basic.email || p.basic.address) return false;
       return true;
   },
@@ -258,18 +263,16 @@ const App = {
     if(this.state.isSyncing) return;
     this.state.isSyncing = true; this.updateHeaderSyncUI();
     
-    // 1. 同步主帳號資料
     window.CloudSync.isPushingMain = true;
     this.data.settings.lastSync = Date.now();
     const res = await window.CloudSync.backup(this.data);
     
-    // 2. 同步獨立家族分享包 (如果有共享碼的話)
     const sharedPromises = Object.values(this.data.profiles)
         .filter(p => p.shareCode)
         .map(async p => {
             window.CloudSync.isPushingShared = p.shareCode;
             try { await window.CloudSync.updateSharedProfile(p); } catch(e) {}
-            setTimeout(() => window.CloudSync.isPushingShared = null, 1500); // 防回音
+            setTimeout(() => window.CloudSync.isPushingShared = null, 1500);
         });
     await Promise.all(sharedPromises);
 
@@ -305,7 +308,7 @@ const App = {
       this.data.profiles[newId] = {
         id: newId, name: name.trim(), role: 'child', password: '', 
         basic: { furigana: '', gender: 'male', birthday: '', postalCode: '', address: '', phone: '', email: '', spouse: 'no', dependents: 0, commuteHour: 0, commuteMinute: 0, motivation: '', photo: null },
-        history: [], skills: [], achievements: [], events: [], plans: []
+        history: [], skills: [], achievements: [], events: [], plans: [], diary: []
       };
       this.state.activeProfileId = newId; this.saveData();
       this.showConfirm("お子様専用のパスワードを設定しますか？", () => {
@@ -316,13 +319,23 @@ const App = {
 
   switchProfile(id) { if(this.data.profiles[id]) { this.state.activeProfileId = id; this.render(); } },
   
-  // FIX: 新增 this.render() 確保修改後立即刷新畫面
   updateBasic(field, value) { 
     if(field === 'birthday' && value > new Date().toISOString().split('T')[0]) { this.showAlert("未来の日付は設定できません。"); return; }
     this.getProfile().basic[field] = value; this.saveData(); this.render();
   },
   
   updateName(value) { this.getProfile().name = value; this.saveData(); this.render(); },
+
+  /* === Image Viewer (Lightbox) === */
+  viewImage(src) {
+    if(!src) return;
+    this.state.viewImageSrc = src;
+    this.render();
+  },
+  closeImageViewer() {
+    this.state.viewImageSrc = null;
+    this.render();
+  },
 
   processImage(file, callback) {
     const reader = new FileReader();
@@ -361,16 +374,32 @@ const App = {
     const ctx = this.state.modalContext; if(!ctx) return;
     const p = this.getProfile(); const isNew = ctx.itemId === null;
     const id = isNew ? 'item_' + Date.now() : ctx.itemId;
-    const itemData = { 
-      id, year: parseInt(document.getElementById('mod-year').value) || '', month: parseInt(document.getElementById('mod-month').value) || '', 
-      title: document.getElementById('mod-title').value, desc: document.getElementById('mod-desc').value, stage: document.getElementById('mod-stage').value 
-    };
-    if(itemData.year && itemData.year > 2100) { this.showAlert("正しい西暦を入力してください。"); return; }
-    if(ctx.category === 'history') itemData.eduStatus = document.getElementById('mod-edu-status').value;
-    if(ctx.category === 'skills') itemData.dim = document.getElementById('mod-skill-dim').value;
-    if(ctx.category === 'plans') {
-       if(isNew) { itemData.author = this.state.loginRole; itemData.visibility = 'hidden'; itemData.status = 'active'; } 
-       else { const ex = p.plans.find(i => i.id === id); itemData.author = ex.author; itemData.visibility = ex.visibility; itemData.status = ex.status; }
+    let itemData = { id };
+    
+    // 日記(Memo)的專屬儲存邏輯
+    if (ctx.category === 'diary') {
+        const dStr = document.getElementById('mod-date').value;
+        if(!dStr) { this.showAlert("日付を入力してください。"); return; }
+        itemData.date = dStr;
+        itemData.year = parseInt(dStr.split('-')[0]);
+        itemData.month = parseInt(dStr.split('-')[1]);
+        itemData.title = document.getElementById('mod-title').value; // 將TextArea內容存為Title
+        if(!itemData.title.trim()) { this.showAlert("内容を入力してください。"); return; }
+        itemData.desc = ''; // Diary 不使用 Desc
+    } else {
+        itemData.year = parseInt(document.getElementById('mod-year').value) || '';
+        itemData.month = parseInt(document.getElementById('mod-month').value) || '';
+        itemData.title = document.getElementById('mod-title').value;
+        itemData.desc = document.getElementById('mod-desc').value;
+        itemData.stage = document.getElementById('mod-stage').value;
+        
+        if(itemData.year && itemData.year > 2100) { this.showAlert("正しい西暦を入力してください。"); return; }
+        if(ctx.category === 'history') itemData.eduStatus = document.getElementById('mod-edu-status').value;
+        if(ctx.category === 'skills') itemData.dim = document.getElementById('mod-skill-dim').value;
+        if(ctx.category === 'plans') {
+           if(isNew) { itemData.author = this.state.loginRole; itemData.visibility = 'hidden'; itemData.status = 'active'; } 
+           else { const ex = p.plans.find(i => i.id === id); itemData.author = ex.author; itemData.visibility = ex.visibility; itemData.status = ex.status; }
+        }
     }
     
     if(!isNew) { const exist = p[ctx.category].find(i => i.id === id); if(exist && exist.photo) itemData.photo = exist.photo; }
@@ -399,7 +428,6 @@ const App = {
   grantAccess(itemId) { const item = this.getProfile().plans.find(i => i.id === itemId); if(item) { item.visibility = 'visible'; this.saveData(); this.render(); } },
   requestAccess(itemId) { const item = this.getProfile().plans.find(i => i.id === itemId); if(item) { item.visibility = 'requested'; this.saveData(); this.render(); this.showAlert('表示リクエストを送信しました。'); } },
 
-  /* === 遊客本機資料復原/匯出 === */
   exportLocalData() {
     const blob = new Blob([JSON.stringify(this.data)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -423,26 +451,22 @@ const App = {
     });
   },
 
-  /* === 家族傳承與實時共享 (Real-time Family Co-edit) === */
+  /* === 家族傳承與實時共享 === */
   async generateShareCode() {
     if(!window.CloudSync?.isLoggedIn) { this.showAlert('共有機能を使用するには、まずGoogleアカウントを連携してください。'); return; }
     const pId = document.getElementById('share-profile-select').value;
     const profileToShare = this.data.profiles[pId];
     if(!profileToShare) return;
     
-    // 分配一個全域共享碼，以便後續建立即時監聽連線
-    if (!profileToShare.shareCode) {
-        profileToShare.shareCode = Math.random().toString(36).substr(2, 9).toUpperCase();
-    }
+    if (!profileToShare.shareCode) profileToShare.shareCode = Math.random().toString(36).substr(2, 9).toUpperCase();
     profileToShare._lastUpdate = Date.now();
     this.saveData();
 
-    this.state.dialog = { type: 'loading', message: '共有リンクを生成中...\n(Googleクラウドと通信しています)' }; 
-    this.render();
+    this.state.dialog = { type: 'loading', message: '共有リンクを生成中...\n(Googleクラウドと通信しています)' }; this.render();
 
     const res = await window.CloudSync.createShareLink(profileToShare);
     if(res.success) {
-        if(window.CloudSync.isLoggedIn) window.CloudSync.listenToSharedProfiles(); // 啟動即時監聽
+        if(window.CloudSync.isLoggedIn) window.CloudSync.listenToSharedProfiles(); 
         this.state.dialog = null;
         this.showPrompt(`データの準備が完了しました。リアルタイムで共同編集が可能です。\n以下の「共有コード」をコピーして、受け取り側の端末で入力してください。\n\n【共有コード】`, () => {});
         setTimeout(() => { const inp = document.getElementById('dialog-input'); if(inp){ inp.value = res.code; inp.select(); } }, 100);
@@ -488,7 +512,7 @@ const App = {
           this.showAlert(`データを本人の記録として引き継ぎ、共同編集を開始しました！`);
       }
       this.saveData(); 
-      if(window.CloudSync.isLoggedIn) window.CloudSync.listenToSharedProfiles(); // 啟動即時監聽
+      if(window.CloudSync.isLoggedIn) window.CloudSync.listenToSharedProfiles(); 
       this.state.dialog = null; this.render();
   },
 
@@ -498,6 +522,7 @@ const App = {
     let html = (this.state.view === 'login') ? this.templateLogin() : (this.state.view === 'preview' ? this.templatePrintPreview() : this.templateApp());
     if (this.state.modalContext && this.state.view === 'app') html += this.templateModal();
     if (this.state.dialog) html += this.templateDialog();
+    if (this.state.viewImageSrc) html += this.templateImageViewer(); // 注入 Lightbox
     root.innerHTML = html;
     this.updateHeaderSyncUI();
 
@@ -517,7 +542,6 @@ const App = {
         const dim = s.dim || '専門資格';
         if (scores[dim] !== undefined) scores[dim] += 25;
     });
-    
     const dataVals = SKILL_DIMS.map(d => Math.min(100, scores[d]));
 
     this.chartInstance = new Chart(canvas, {
@@ -548,6 +572,13 @@ const App = {
     else { ind.innerHTML = `<span style="color:#94a3b8;">未ログイン (ローカル)</span>`; }
   },
 
+  templateImageViewer() {
+    return `<div class="image-viewer-overlay" onclick="App.closeImageViewer()">
+        <img src="${this.state.viewImageSrc}" class="image-viewer-img" onclick="event.stopPropagation()">
+        <button class="btn btn-secondary" style="position:absolute; top:20px; right:20px; border-radius:50%; width:40px; height:40px; font-size:24px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="App.closeImageViewer()">×</button>
+    </div>`;
+  },
+
   templateDialog() {
     const d = this.state.dialog; 
     let inputHtml = '', btns = '';
@@ -555,7 +586,7 @@ const App = {
         inputHtml = `<input type="text" id="dialog-input" style="width:100%; margin-top:15px;">`;
         btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button><button class="btn btn-primary btn-full" onclick="const v=document.getElementById('dialog-input'); App.state.dialog.onConfirm(v?v.value:null)">確定</button></div>`;
     } else if (d.type === 'alert') {
-        btns = `<button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm && App.state.dialog.onConfirm()">確認</button>`;
+        btns = `<button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm ? App.state.dialog.onConfirm() : (App.state.dialog=null, App.render())">確認</button>`;
     } else if (d.type === 'confirm') {
         btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog.onCancel()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm()">確定</button></div>`;
     } else if (d.type === 'complete_plan') {
@@ -579,7 +610,7 @@ const App = {
     const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
     
     if (!this.state.loginRole) {
-      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V16.3</h2>
+      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V16.5</h2>
       <button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.setLoginRole('parent')">本人ログイン</button>
       ${childrenIds.length > 0 ? `<button class="btn btn-secondary btn-full" style="padding:15px;" onclick="App.setLoginRole('child')">お子様ログイン</button>` : ''}
       
@@ -628,7 +659,7 @@ const App = {
         </div>
         <div style="background:#e2e8f0; height:10px; border-radius:10px; margin-top:12px; overflow:hidden;"><div style="height:100%; background:var(--primary); width:${lifePct}%;"></div></div>
       </div>
-      <div class="tabs-wrapper">${['overview:📊 分析・対比', 'basic:基本情報(JIS)', 'history:学歴・職歴', 'skills:免許・資格', 'achievements:表彰・出来事', 'plans:🎯 目標管理', 'settings:設定・共有'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.state.activeTab='${k}'; App.render()">${v}</div>`; }).join('')}</div>
+      <div class="tabs-wrapper">${['overview:📊 分析・対比', 'basic:基本情報(JIS)', 'history:学歴・職歴', 'skills:免許・資格', 'achievements:表彰・出来事', 'diary:📝 メモ・日記', 'plans:🎯 目標管理', 'settings:設定・共有'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.state.activeTab='${k}'; App.render()">${v}</div>`; }).join('')}</div>
       <div id="tab-content">${this.renderTabContent(p)}</div>
     </div>`;
   },
@@ -660,6 +691,7 @@ const App = {
       p.history.forEach(i => items.push({...i, catLabel: '経歴', color: 'var(--primary)'}));
       p.skills.forEach(i => items.push({...i, catLabel: '資格', color: 'var(--skill-color)'}));
       p.achievements.forEach(i => items.push({...i, catLabel: '実績', color: 'var(--achieve-color)'}));
+      (p.diary||[]).forEach(i => items.push({...i, catLabel: 'メモ', color: 'var(--diary-color)', displayDate: i.date})); // 加入 Diary
       
       p.plans.forEach(i => {
         const isOwner = i.author === this.state.loginRole;
@@ -672,19 +704,24 @@ const App = {
       
       items.forEach(i => {
         const titleDecor = i.status === 'completed' ? ` <span class="badge-success">達成済</span>` : '';
-        html += `<div class="tl-container ${i.isPlan?'tl-right':'tl-left'}"><div class="tl-dot" style="border-color: ${i.color};"></div><div class="tl-content" style="border-${i.isPlan?'left':'right'}:4px solid ${i.color};"><div style="font-size:11px; font-weight:bold;"><span class="tag" style="background:${i.color}">${i.catLabel}</span> ${i.year||'?'}年${i.month?i.month+'月':''}</div><div style="font-weight:bold; margin-top:4px;">${i.title} ${i.eduStatus?`[${i.eduStatus}]`:''} ${titleDecor}</div>${i.desc?`<div style="font-size:12px; color:var(--text-sub); margin-top:4px;">${i.desc}</div>`:''}${i.photo?`<img src="${i.photo}" style="width:100px; margin-top:8px; border-radius:4px;">`:''}</div></div>`;
+        const dateStr = i.displayDate ? i.displayDate.replace(/-/g, '/') : `${i.year||'?'}年${i.month?i.month+'月':''}`;
+        const titleFontSize = i.catLabel === 'メモ' ? '14px' : '16px';
+        const titleFontWeight = i.catLabel === 'メモ' ? 'normal' : 'bold';
+
+        html += `<div class="tl-container ${i.isPlan?'tl-right':'tl-left'}"><div class="tl-dot" style="border-color: ${i.color};"></div><div class="tl-content" style="border-${i.isPlan?'left':'right'}:4px solid ${i.color};"><div style="font-size:11px; font-weight:bold; color:var(--text-sub);"><span class="tag" style="background:${i.color}">${i.catLabel}</span> ${dateStr}</div><div style="font-weight:${titleFontWeight}; font-size:${titleFontSize}; margin-top:4px; white-space:pre-wrap;">${i.title} ${i.eduStatus?`[${i.eduStatus}]`:''} ${titleDecor}</div>${i.desc?`<div style="font-size:12px; color:var(--text-sub); margin-top:4px;">${i.desc}</div>`:''}${i.photo?`<img src="${i.photo}" style="width:100%; max-width:200px; margin-top:8px; border-radius:4px; cursor:zoom-in; border:1px solid #e2e8f0;" onclick="App.viewImage('${i.photo}')">`:''}</div></div>`;
       });
       return html + `</div></div>`;
     }
 
     if(tab === 'basic') {
       const today = new Date().toISOString().split('T')[0];
-      return `<div class="card"><div class="card-title">JIS 基礎情報</div><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img"><button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">削除</button>` : `<div style="width:100px; height:130px; border:1px dashed #ccc; display:flex; align-items:center; justify-content:center;">📷</div><button class="btn btn-primary btn-sm" onclick="App.uploadPhoto('basic')">写真貼付</button>`}</div><div><label>氏名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)"><label>ふりがな</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)"><div class="grid-2"><div><label>性別</label><select onchange="App.updateBasic('gender', this.value)"><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label>生年月日</label><input type="date" value="${b.birthday||''}" max="${today}" onchange="App.updateBasic('birthday', this.value)"></div></div></div></div><div class="grid-2"><div><label>電話番号</label><input type="text" value="${b.phone||''}" onchange="App.updateBasic('phone', this.value)"></div><div><label>メールアドレス</label><input type="text" value="${b.email||''}" onchange="App.updateBasic('email', this.value)"></div></div><div class="grid-2"><div><label>郵便番号</label><input type="text" value="${b.postalCode||''}" onchange="App.updateBasic('postalCode', this.value)"></div><div><label>現住所</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)"></div></div><div class="grid-2"><div><label>配偶者</label><select onchange="App.updateBasic('spouse', this.value)"><option value="no" ${b.spouse==='no'?'selected':''}>無</option><option value="yes" ${b.spouse==='yes'?'selected':''}>有</option></select></div><div><label>扶養家族数 (配偶者を除く)</label><input type="number" value="${b.dependents||0}" onchange="App.updateBasic('dependents', this.value)"></div></div></div>`;
+      return `<div class="card"><div class="card-title">JIS 基礎情報</div><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img" style="cursor:zoom-in;" onclick="App.viewImage('${b.photo}')"><button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">削除</button>` : `<div style="width:100px; height:130px; border:1px dashed #ccc; display:flex; align-items:center; justify-content:center;">📷</div><button class="btn btn-primary btn-sm" onclick="App.uploadPhoto('basic')">写真貼付</button>`}</div><div><label>氏名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)"><label>ふりがな</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)"><div class="grid-2"><div><label>性別</label><select onchange="App.updateBasic('gender', this.value)"><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label>生年月日</label><input type="date" value="${b.birthday||''}" max="${today}" onchange="App.updateBasic('birthday', this.value)"></div></div></div></div><div class="grid-2"><div><label>電話番号</label><input type="text" value="${b.phone||''}" onchange="App.updateBasic('phone', this.value)"></div><div><label>メールアドレス</label><input type="text" value="${b.email||''}" onchange="App.updateBasic('email', this.value)"></div></div><div class="grid-2"><div><label>郵便番号</label><input type="text" value="${b.postalCode||''}" onchange="App.updateBasic('postalCode', this.value)"></div><div><label>現住所</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)"></div></div><div class="grid-2"><div><label>配偶者</label><select onchange="App.updateBasic('spouse', this.value)"><option value="no" ${b.spouse==='no'?'selected':''}>無</option><option value="yes" ${b.spouse==='yes'?'selected':''}>有</option></select></div><div><label>扶養家族数 (配偶者を除く)</label><input type="number" value="${b.dependents||0}" onchange="App.updateBasic('dependents', this.value)"></div></div></div>`;
     }
 
     if(tab === 'history') return this.buildListUI('history', '学歴・職歴');
     if(tab === 'skills') return this.buildListUI('skills', '免許・資格');
     if(tab === 'achievements') return this.buildListUI('achievements', '表彰・実績・出来事');
+    if(tab === 'diary') return this.buildDiaryUI('diary', '📝 メモ・日記 (格言・一言メモ)');
     
     if(tab === 'plans') {
         const myRole = this.state.loginRole;
@@ -773,16 +810,36 @@ const App = {
   buildListUI(cat, title) {
     const items = this.getProfile()[cat] || [];
     let html = `<div class="card"><h3>${title} <button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button></h3>`;
+    if(items.length === 0) html += `<p style="font-size:13px; color:#999; text-align:center;">データがありません</p>`;
     items.forEach(i => {
-      html += `<div class="list-item"><div class="item-content" onclick="App.openModal('${cat}', '${i.id}')"><div class="item-meta">${i.year||'?'}年 ${i.stage||''} ${i.eduStatus?`[${i.eduStatus}]`:''} ${i.dim?`[${i.dim}]`:''}</div><div class="item-title">${i.title}</div><div class="item-desc">${i.desc||''}</div></div><div class="photo-wrapper">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="App.deleteItemPhoto('${cat}','${i.id}')">` : `<button class="btn btn-secondary btn-sm" onclick="App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`}</div><button class="btn btn-danger btn-sm" onclick="App.deleteItem('${cat}','${i.id}')">削除</button></div>`;
+      html += `<div class="list-item"><div class="item-content" onclick="App.openModal('${cat}', '${i.id}')"><div class="item-meta">${i.year||'?'}年 ${i.stage||''} ${i.eduStatus?`[${i.eduStatus}]`:''} ${i.dim?`[${i.dim}]`:''}</div><div class="item-title">${i.title}</div><div class="item-desc">${i.desc||''}</div></div><div class="photo-wrapper" style="position:relative;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')"><button class="btn btn-danger btn-sm" style="position:absolute; top:-8px; right:-8px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>` : `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`}</div><button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button></div>`;
     });
     if(cat === 'skills') html += `<textarea rows="3" onchange="App.updateBasic('motivation', this.value)" placeholder="志望の動機、特技、アピールポイントなど">${this.getProfile().basic.motivation||''}</textarea>`;
+    return html + `</div>`;
+  },
+
+  buildDiaryUI(cat, title) {
+    const items = [...(this.getProfile()[cat] || [])].sort((a,b) => (b.date > a.date ? 1 : -1));
+    let html = `<div class="card" style="border-top:4px solid var(--diary-color);"><h3>${title} <button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button></h3>`;
+    if (items.length === 0) html += `<p style="font-size:13px; color:#999; text-align:center;">記録がありません</p>`;
+    items.forEach(i => {
+      html += `<div class="list-item"><div class="item-content" onclick="App.openModal('${cat}', '${i.id}')"><div class="item-meta" style="color:var(--diary-color); font-weight:bold;">${i.date}</div><div class="item-title" style="font-weight:normal; font-size:14px; white-space:pre-wrap;">${i.title}</div></div><div class="photo-wrapper" style="position:relative;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')"><button class="btn btn-danger btn-sm" style="position:absolute; top:-8px; right:-8px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>` : `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`}</div><button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button></div>`;
+    });
     return html + `</div>`;
   },
 
   templateModal() {
     const ctx = this.state.modalContext; const p = this.getProfile(); const isNew = ctx.itemId === null;
     const item = isNew ? {} : p[ctx.category].find(i => i.id === ctx.itemId);
+    
+    if (ctx.category === 'diary') {
+        const today = new Date().toISOString().split('T')[0];
+        return `<div class="modal-overlay overlay"><div class="modal-box"><h3>${isNew?'メモ・日記を追加':'編集'}</h3>
+        <label>日付</label><input type="date" id="mod-date" value="${item.date || today}">
+        <label>内容 (格言・一言など)</label><textarea id="mod-title" rows="4" placeholder="今日事今日畢">${item.title||''}</textarea>
+        <div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
+    }
+
     const isEdu = ctx.category === 'history'; const isSkill = ctx.category === 'skills';
     const stageOptions = STAGES.map(s => `<option value="${s}" ${item.stage===s?'selected':''}>${s}</option>`).join('');
     const dimOptions = SKILL_DIMS.map(s => `<option value="${s}" ${item.dim===s?'selected':''}>${s}</option>`).join('');
@@ -836,18 +893,7 @@ const App = {
         <table class="jis-table"><tr><td style="height:35mm; vertical-align:top;"><b>志望の動機、特技、好きな学科、アピールポイントなど</b><br><br>${b.motivation||''}</td></tr></table>
         <table class="jis-table" style="margin-bottom:0;"><tr><td style="width:40%; height:15mm; vertical-align:top;">通勤時間<br><div style="text-align:center; margin-top:5px;">約 ${b.commuteHour||0} 時間 ${b.commuteMinute||0} 分</div></td><td style="width:30%; vertical-align:top;">扶養家族数（配偶者を除く）<br><div style="text-align:center; margin-top:5px;">${b.dependents||0} 人</div></td><td style="width:30%; vertical-align:top;">配偶者<br><div style="text-align:center; margin-top:5px;">${b.spouse==='yes'?'有':'無'}</div></td></tr></table>
       </div></div>`;
-  },
-
-  // FIX: 刪除照片後，強制刷新 UI 
-  deleteItemPhoto(cat, id) { 
-    this.showConfirm("写真を削除しますか？", () => { 
-        const i=this.getProfile()[cat].find(x=>x.id===id); 
-        if(i) i.photo=null; 
-        this.saveData(); 
-        this.render(); 
-    }); 
-  },
-  clearAllData() { this.showConfirm("【警告】すべてのデータを完全に消去します。元に戻せません。", () => { localStorage.removeItem(this.DB_KEY); location.reload(); }); }
+  }
 };
 
 window.onload = () => App.init();
@@ -887,7 +933,6 @@ window.onload = () => App.init();
           } catch(e) {}
       }
       
-      // 啟動實時監聽 (Real-time Co-editing Sync)
       window.CloudSync.listenToMainData();
       window.CloudSync.listenToSharedProfiles();
 
@@ -902,7 +947,6 @@ window.onload = () => App.init();
     }
   });
 
-  // 主資料實時監聽 (同帳號跨設備)
   window.CloudSync.listenToMainData = () => {
       if(window.CloudSync.unsubMain) return; 
       window.CloudSync.unsubMain = onSnapshot(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData'), (s) => {
@@ -915,22 +959,20 @@ window.onload = () => App.init();
                   localStorage.setItem(App.DB_KEY, JSON.stringify(App.data));
                   App.render();
                   window.CloudSync.isPulling = false;
-                  window.CloudSync.listenToSharedProfiles(); // Refresh shared listeners
+                  window.CloudSync.listenToSharedProfiles(); 
               }
           }
       }, (err) => console.warn("Main sync error:", err));
   };
 
-  // 共享家族資料實時監聽 (跨帳號共同編輯)
   window.CloudSync.listenToSharedProfiles = () => {
       Object.values(App.data.profiles).forEach(p => {
           if(p.shareCode && !window.CloudSync.unsubShared[p.shareCode]) {
               window.CloudSync.unsubShared[p.shareCode] = onSnapshot(doc(db, 'shared_profiles', p.shareCode), (s) => {
-                  if (window.CloudSync.isPushingShared === p.shareCode) return; // 避免自己覆蓋自己(Echo)
+                  if (window.CloudSync.isPushingShared === p.shareCode) return; 
                   if(s.exists()) {
                       const remoteData = JSON.parse(s.data().data);
                       const localP = App.data.profiles[p.id];
-                      // 只有雲端資料比本地新時才覆蓋
                       if (!localP || remoteData._lastUpdate > (localP._lastUpdate || 0)) {
                           window.CloudSync.isPulling = true;
                           const localId = p.id;
@@ -942,7 +984,7 @@ window.onload = () => App.init();
                           window.CloudSync.isPulling = false;
                       }
                   }
-              }, (err) => console.warn("Shared profile sync error:", err));
+              }, (err) => console.warn("Shared sync error:", err));
           }
       });
   };
@@ -991,7 +1033,6 @@ window.onload = () => App.init();
     catch(e){ return {success:false, msg:e.message}; }
   };
 
-  // 單獨推送家族成員的即時變更
   window.CloudSync.updateSharedProfile = async (profileData) => {
       try {
           await setDoc(doc(db, 'shared_profiles', profileData.shareCode), {
