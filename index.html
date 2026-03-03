@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>人生履歴書 V16.9 (Identity & Sync Fix)</title>
+  <title>人生履歴書 V17.0 (Identity & Sync Perfected)</title>
   
   <!-- Chart.js for Radar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -170,8 +170,8 @@ const manifestStr = JSON.stringify({
 document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="data:application/manifest+json;charset=utf-8,${encodeURIComponent(manifestStr)}">`);
 
 /**
- * 人生履歴書 核心エンジン (V16.9)
- * 重大修正：引き継ぎ後のアイデンティティ保持、親子の権限厳密化
+ * 人生履歴書 核心エンジン (V17.0)
+ * 最終修正：絶対的アイデンティティ（parent/child）の確立、データ競合の完全解消
  */
 const STAGES = ['乳幼児期 (0-6歳)', '小学生 (7-12歳)', '中学生 (13-15歳)', '高校生 (16-18歳)', '大学/専門 (19-22歳)', '20代 (若手社会人)', '30代 (中堅)', '40代以降', '全期間共通'];
 const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニケーション', '専門資格'];
@@ -213,15 +213,19 @@ const App = {
              if(!p.diary) p.diary = []; 
              if(p.isClaimed === undefined) p.isClaimed = false;
              
-             // レガシーデータ移行: 作者タグの補完 ('self' 又は 'parent')
+             // レガシーデータ移行 (バグ修正: 'self' を正しい role に変換)
              if(p.plans) p.plans.forEach(pl => { 
                  if(!pl.status) pl.status = 'active'; 
-                 if(pl.author === 'child') pl.author = 'self';
-                 if(!pl.author) pl.author = p.role === 'child' ? 'parent' : 'self';
+                 if(pl.author === 'self' || pl.author === 'child_self') {
+                     pl.author = (p.id === 'parent_self') ? 'parent' : 'child';
+                 }
+                 if(!pl.author) pl.author = 'parent';
              });
              if(p.diary) p.diary.forEach(d => {
-                 if(d.author === 'child') d.author = 'self';
-                 if(!d.author) d.author = p.role === 'child' ? 'parent' : 'self';
+                 if(d.author === 'self' || d.author === 'child_self') {
+                     d.author = (p.id === 'parent_self') ? 'parent' : 'child';
+                 }
+                 if(!d.author) d.author = 'parent';
                  if(!d.visibility) d.visibility = 'visible';
              });
           });
@@ -244,12 +248,6 @@ const App = {
           }, 800);
       }
     } catch (e) { this.showAlert('ストレージ不足です。画像を減らしてください。'); }
-  },
-
-  // 現在操作している有効な権限を判定 (親 vs 本人)
-  getEffectiveRole(p) {
-      if (p.id === 'parent_self') return 'self';
-      return this.state.loginRole === 'parent' ? 'parent' : 'self';
   },
 
   isLocalDefault() {
@@ -402,7 +400,7 @@ const App = {
     const id = isNew ? 'item_' + Date.now() : ctx.itemId;
     let itemData = { id };
     
-    const myAuthorTag = this.getEffectiveRole(p);
+    const myAuthorTag = this.state.loginRole; // 嚴格綁定：現在登入的是誰，創建者就是誰
 
     if (ctx.category === 'diary') {
         const dStr = document.getElementById('mod-date').value;
@@ -659,7 +657,6 @@ const App = {
       }
       
       if (childrenIds.length > 0) {
-          // 如果有被繼承的帳號，顯示專屬按鈕
           const claimedChildren = childrenIds.filter(id => this.data.profiles[id].isClaimed);
           claimedChildren.forEach(cid => {
               loginBtns += `<button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.state.loginChildId='${cid}'; App.setLoginRole('child')">${this.data.profiles[cid].name} (メイン) ログイン</button>`;
@@ -671,7 +668,7 @@ const App = {
           }
       }
 
-      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V16.9</h2>
+      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V17.0</h2>
       ${loginBtns}
       <div style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
         <button class="btn btn-google btn-full" style="margin-bottom:10px;" onclick="window.CloudSync.login()"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" style="width:16px; margin-right:8px;"> Googleアカウントでログイン</button>
@@ -725,11 +722,9 @@ const App = {
 
   renderTabContent(p) {
     const tab = this.state.activeTab; const b = p.basic;
-    const effectiveRole = this.getEffectiveRole(p);
+    const myRole = this.state.loginRole; // 'parent' or 'child'
     
-    // 如果登入的是parent，且看的不是自己，且對方已宣告為獨立，則唯讀
-    const isReadOnly = p.id !== 'parent_self' && p.isClaimed === true && this.state.loginRole === 'parent';
-    
+    const isReadOnly = p.id !== 'parent_self' && p.isClaimed === true && myRole === 'parent';
     let topNotice = isReadOnly ? `<div style="background:#e0f2fe; color:#0369a1; padding:10px; border-radius:8px; margin-bottom:15px; font-size:12px; border:1px solid #bae6fd;">ℹ️ このプロフィールは本人が引き継ぎ済みのため、閲覧および「期待・プラン」のみ編集可能です。</div>` : '';
 
     if(tab === 'overview') {
@@ -758,7 +753,7 @@ const App = {
       p.achievements.forEach(i => items.push({...i, catLabel: '実績', color: 'var(--achieve-color)'}));
       
       (p.diary||[]).forEach(i => {
-          const isOwner = i.author === effectiveRole;
+          const isOwner = i.author === myRole;
           if (isOwner || i.visibility === 'visible') {
               items.push({...i, catLabel: 'メモ', color: 'var(--diary-color)', displayDate: i.date});
           } else {
@@ -767,15 +762,15 @@ const App = {
       });
       
       p.plans.forEach(i => {
-          const isOwner = i.author === effectiveRole;
+          const isOwner = i.author === myRole;
           let label = 'プラン';
           let color = 'var(--plan-my)';
 
           if (p.id === 'parent_self') {
-              label = i.author === 'parent' ? '親からの期待' : '目標';
-              color = i.author === 'parent' ? 'var(--plan-parent)' : 'var(--plan-my)';
+              label = i.author === 'parent' ? '自分の目標' : '目標';
+              color = i.author === 'parent' ? 'var(--plan-my)' : 'var(--plan-parent)';
           } else {
-              label = i.author === 'parent' ? '親の期待' : 'お子様の目標';
+              label = i.author === 'parent' ? '親からの期待' : 'お子様の目標';
               color = i.author === 'parent' ? 'var(--plan-parent)' : 'var(--plan-my)';
           }
 
@@ -806,19 +801,20 @@ const App = {
     if(tab === 'diary') return topNotice + this.buildDiaryUI('diary', '📝 メモ・日記 (格言・一言メモ)', isReadOnly);
     
     if(tab === 'plans') {
-        const requests = (p.plans||[]).filter(i => i.author === effectiveRole && i.visibility === 'requested');
+        const requests = (p.plans||[]).filter(i => i.author === myRole && i.visibility === 'requested');
         let reqHtml = ''; if(requests.length > 0) reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3>承認待ちリクエスト</h3>${requests.map(r => `<div class="list-item"><div>${r.year}年: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('plans','${r.id}')">承認</button></div>`).join('')}</div>`;
         
         const renderP = (authorFilter) => {
             const filtered = (p.plans||[]).filter(i => i.author === authorFilter);
             if(filtered.length === 0) return '<p style="text-align:center; font-size:13px; color:#999;">データなし</p>';
             return filtered.map(i => {
-                const isOwner = i.author === effectiveRole; // 只有真正的所有者能編輯
+                const isOwner = i.author === myRole; 
                 if(isOwner || i.visibility === 'visible') {
                     const isCompleted = i.status === 'completed';
                     const canEdit = isOwner; 
+                    const canComplete = !isCompleted && !isReadOnly; 
                     
-                    const compBtn = (!isCompleted && !isReadOnly) ? `<button class="btn btn-success btn-sm" onclick="event.stopPropagation(); App.triggerCompletePlan('${i.id}')">達成</button>` : '';
+                    const compBtn = canComplete ? `<button class="btn btn-success btn-sm" onclick="event.stopPropagation(); App.triggerCompletePlan('${i.id}')">達成</button>` : '';
                     const visibilityBtn = isOwner ? `<button class="btn ${i.visibility === 'visible' ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="event.stopPropagation(); App.toggleVisibility('plans','${i.id}')">${i.visibility === 'visible' ? '🔓 公開中' : '🔒 非公開'}</button>` : '';
                     const titleUI = isCompleted ? `<span class="badge-success">達成済</span> <strike style="color:#94a3b8;">${i.title}</strike>` : i.title;
 
@@ -828,13 +824,13 @@ const App = {
             }).join('');
         };
 
-        let mainTitle = ''; let subTitle = ''; let mainAuthor = effectiveRole; let subAuthor = effectiveRole === 'parent' ? 'child' : 'parent';
+        let mainTitle = ''; let subTitle = ''; let mainAuthor = myRole; let subAuthor = myRole === 'parent' ? 'child' : 'parent';
         
         if (p.id === 'parent_self') {
             mainTitle = '🎯 自分の目標・プラン';
-            subTitle = '親からの期待'; 
+            subTitle = ''; 
         } else {
-            if (effectiveRole === 'parent') { 
+            if (myRole === 'parent') { 
                 mainTitle = '🎯 お子様への期待'; 
                 subTitle = 'お子様自身の目標'; 
             } else { 
@@ -845,13 +841,13 @@ const App = {
         
         return topNotice + reqHtml + `<div class="grid-2">
             <div class="card" style="border-top:4px solid var(--plan-my);">
-                <h3>${mainTitle} ${(!isReadOnly || mainAuthor === effectiveRole) ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button>` : ''}</h3>
+                <h3>${mainTitle} ${(!isReadOnly || mainAuthor === myRole) ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button>` : ''}</h3>
                 ${renderP(mainAuthor)}
             </div>
-            <div class="card" style="border-top:4px solid var(--plan-parent);">
-                <h3>${subTitle} ${(!isReadOnly || subAuthor === effectiveRole) ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button>` : ''}</h3>
+            ${subTitle ? `<div class="card" style="border-top:4px solid var(--plan-parent);">
+                <h3>${subTitle} ${(!isReadOnly || subAuthor === myRole) ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button>` : ''}</h3>
                 ${renderP(subAuthor)}
-            </div>
+            </div>` : ''}
         </div>`;
     }
 
@@ -924,8 +920,8 @@ const App = {
 
   buildDiaryUI(cat, title, isReadOnly) {
     const p = this.getProfile();
-    const effectiveRole = this.getEffectiveRole(p);
-    const requests = (p[cat]||[]).filter(i => i.author === effectiveRole && i.visibility === 'requested');
+    const myRole = this.state.loginRole;
+    const requests = (p[cat]||[]).filter(i => i.author === myRole && i.visibility === 'requested');
     let reqHtml = '';
     if (requests.length > 0) {
         reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3>承認待ちリクエスト</h3>${requests.map(r => `<div class="list-item"><div>${r.date}: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('${cat}', '${r.id}')">公開する</button></div>`).join('')}</div>`;
@@ -937,7 +933,7 @@ const App = {
     if (filtered.length === 0) html += `<p style="text-align:center; font-size:13px; color:#999;">記録がありません</p>`;
 
     filtered.forEach(i => {
-      const isOwner = i.author === effectiveRole;
+      const isOwner = i.author === myRole;
       if (isOwner || i.visibility === 'visible') {
           const canEdit = isOwner; 
           const visibilityBtn = isOwner ? `<button class="btn ${i.visibility === 'visible' ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="event.stopPropagation(); App.toggleVisibility('${cat}','${i.id}')">${i.visibility === 'visible' ? '🔓 公開中' : '🔒 非公開'}</button>` : '';
