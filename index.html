@@ -210,13 +210,18 @@ const App = {
       if (raw) {
           this.data = JSON.parse(raw);
           Object.values(this.data.profiles).forEach(p => {
-             if(p.plans) p.plans.forEach(pl => { if(!pl.status) pl.status = 'active'; });
-             if(p.skills) p.skills.forEach(sk => { if(!sk.dim) sk.dim = '専門資格'; });
              if(!p.diary) p.diary = []; 
              if(p.isClaimed === undefined) p.isClaimed = false;
              
+             // レガシーデータ移行: 作者タグの補完 ('self' 又は 'parent')
+             if(p.plans) p.plans.forEach(pl => { 
+                 if(!pl.status) pl.status = 'active'; 
+                 if(pl.author === 'child') pl.author = 'self';
+                 if(!pl.author) pl.author = p.role === 'child' ? 'parent' : 'self';
+             });
              if(p.diary) p.diary.forEach(d => {
-                 if(!d.author) d.author = p.role === 'child' ? 'child' : 'parent';
+                 if(d.author === 'child') d.author = 'self';
+                 if(!d.author) d.author = p.role === 'child' ? 'parent' : 'self';
                  if(!d.visibility) d.visibility = 'visible';
              });
           });
@@ -241,11 +246,10 @@ const App = {
     } catch (e) { this.showAlert('ストレージ不足です。画像を減らしてください。'); }
   },
 
-  // 取得有效身分標籤 (解決繼承後的權限錯亂)
+  // 現在操作している有効な権限を判定 (親 vs 本人)
   getEffectiveRole(p) {
-      // 如果這個檔案被繼承到主畫面，那操作者在邏輯上其實是 'child'
-      if (p.id === 'parent_self' && p.isClaimed) return 'child';
-      return this.state.loginRole || 'parent';
+      if (p.id === 'parent_self') return 'self';
+      return this.state.loginRole === 'parent' ? 'parent' : 'self';
   },
 
   isLocalDefault() {
@@ -398,8 +402,7 @@ const App = {
     const id = isNew ? 'item_' + Date.now() : ctx.itemId;
     let itemData = { id };
     
-    // 使用有效身分來標記創建者
-    const effectiveRole = this.getEffectiveRole(p);
+    const myAuthorTag = this.getEffectiveRole(p);
 
     if (ctx.category === 'diary') {
         const dStr = document.getElementById('mod-date').value;
@@ -410,8 +413,8 @@ const App = {
         itemData.desc = ''; 
         itemData.visibility = document.getElementById('mod-visibility').value;
         
-        if(isNew) { itemData.author = effectiveRole; }
-        else { const ex = p.diary.find(i => i.id === id); itemData.author = ex.author || effectiveRole; }
+        if(isNew) { itemData.author = myAuthorTag; }
+        else { const ex = p.diary.find(i => i.id === id); itemData.author = ex.author || myAuthorTag; }
     } else {
         itemData.year = parseInt(document.getElementById('mod-year').value) || '';
         itemData.month = parseInt(document.getElementById('mod-month').value) || '';
@@ -424,8 +427,8 @@ const App = {
         if(ctx.category === 'skills') itemData.dim = document.getElementById('mod-skill-dim').value;
         if(ctx.category === 'plans') {
            itemData.visibility = document.getElementById('mod-visibility').value;
-           if(isNew) { itemData.author = effectiveRole; itemData.status = 'active'; } 
-           else { const ex = p.plans.find(i => i.id === id); itemData.author = ex.author || effectiveRole; itemData.status = ex.status; }
+           if(isNew) { itemData.author = myAuthorTag; itemData.status = 'active'; } 
+           else { const ex = p.plans.find(i => i.id === id); itemData.author = ex.author || myAuthorTag; itemData.status = ex.status; }
         }
     }
     
@@ -546,7 +549,7 @@ const App = {
           this.state.activeProfileId = originalId;
           this.state.loginRole = 'child';
           this.state.loginChildId = originalId;
-          this.showAlert(`データを本人の記録として引き継ぎました！`);
+          this.showAlert(`データを本人の記録として引き継ぎました！\n(今後、親からの期待は「親の期待」に表示されます)`);
       }
       this.saveData(); 
       if(window.CloudSync.isLoggedIn) window.CloudSync.listenToSharedProfiles(); 
@@ -656,7 +659,16 @@ const App = {
       }
       
       if (childrenIds.length > 0) {
-          loginBtns += `<button class="btn btn-secondary btn-full" style="padding:15px;" onclick="App.setLoginRole('child')">お子様ログイン</button>`;
+          // 如果有被繼承的帳號，顯示專屬按鈕
+          const claimedChildren = childrenIds.filter(id => this.data.profiles[id].isClaimed);
+          claimedChildren.forEach(cid => {
+              loginBtns += `<button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.state.loginChildId='${cid}'; App.setLoginRole('child')">${this.data.profiles[cid].name} (メイン) ログイン</button>`;
+          });
+          
+          const normalChildren = childrenIds.filter(id => !this.data.profiles[id].isClaimed);
+          if (normalChildren.length > 0) {
+              loginBtns += `<button class="btn btn-secondary btn-full" style="padding:15px;" onclick="App.setLoginRole('child')">お子様ログイン</button>`;
+          }
       }
 
       return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V16.9</h2>
@@ -760,10 +772,8 @@ const App = {
           let color = 'var(--plan-my)';
 
           if (p.id === 'parent_self') {
-              if (p.isClaimed) {
-                  label = i.author === 'parent' ? '親からの期待' : '目標';
-                  color = i.author === 'parent' ? 'var(--plan-parent)' : 'var(--plan-my)';
-              }
+              label = i.author === 'parent' ? '親からの期待' : '目標';
+              color = i.author === 'parent' ? 'var(--plan-parent)' : 'var(--plan-my)';
           } else {
               label = i.author === 'parent' ? '親の期待' : 'お子様の目標';
               color = i.author === 'parent' ? 'var(--plan-parent)' : 'var(--plan-my)';
@@ -800,7 +810,7 @@ const App = {
         let reqHtml = ''; if(requests.length > 0) reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3>承認待ちリクエスト</h3>${requests.map(r => `<div class="list-item"><div>${r.year}年: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('plans','${r.id}')">承認</button></div>`).join('')}</div>`;
         
         const renderP = (authorFilter) => {
-            const filtered = (p.plans||[]).filter(i => (i.author || 'parent') === authorFilter);
+            const filtered = (p.plans||[]).filter(i => i.author === authorFilter);
             if(filtered.length === 0) return '<p style="text-align:center; font-size:13px; color:#999;">データなし</p>';
             return filtered.map(i => {
                 const isOwner = i.author === effectiveRole; // 只有真正的所有者能編輯
@@ -821,27 +831,15 @@ const App = {
         let mainTitle = ''; let subTitle = ''; let mainAuthor = effectiveRole; let subAuthor = effectiveRole === 'parent' ? 'child' : 'parent';
         
         if (p.id === 'parent_self') {
-            if (p.isClaimed) {
-                mainTitle = '🎯 自分の目標・プラン';
-                subTitle = '親からの期待'; 
-                mainAuthor = 'child';
-                subAuthor = 'parent';
-            } else {
-                mainTitle = '🎯 自分の目標・プラン';
-                subTitle = ''; 
-                mainAuthor = 'parent';
-            }
+            mainTitle = '🎯 自分の目標・プラン';
+            subTitle = '親からの期待'; 
         } else {
             if (effectiveRole === 'parent') { 
                 mainTitle = '🎯 お子様への期待'; 
                 subTitle = 'お子様自身の目標'; 
-                mainAuthor = 'parent';
-                subAuthor = 'child';
             } else { 
                 mainTitle = '🎯 自分の目標・プラン'; 
                 subTitle = '親からの期待'; 
-                mainAuthor = 'child';
-                subAuthor = 'parent';
             }
         }
         
@@ -850,10 +848,10 @@ const App = {
                 <h3>${mainTitle} ${(!isReadOnly || mainAuthor === effectiveRole) ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button>` : ''}</h3>
                 ${renderP(mainAuthor)}
             </div>
-            ${subTitle ? `<div class="card" style="border-top:4px solid var(--plan-parent);">
+            <div class="card" style="border-top:4px solid var(--plan-parent);">
                 <h3>${subTitle} ${(!isReadOnly || subAuthor === effectiveRole) ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button>` : ''}</h3>
                 ${renderP(subAuthor)}
-            </div>` : ''}
+            </div>
         </div>`;
     }
 
