@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>人生履歷 V13.7 (Firebase 自動連線版)</title>
+  <title>人生履歷 V13.9 (Google 自動同步版)</title>
   <style>
     /* =========================================
-       1. 基礎設計 (Base Design) - JIS 規範符合
+       1. 基礎設計 (Base Design)
        ========================================= */
     :root {
       --primary: #0f766e;
@@ -46,7 +46,11 @@
 
     /* Header */
     .header { background: var(--card-bg); padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-    
+    .sync-status { font-size: 11px; color: #10b981; margin-left: 5px; font-weight: normal; }
+    .sync-status.syncing { color: #8b5cf6; animation: blink 1s infinite; }
+
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
     /* Tabs */
     .tabs-wrapper { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
     .tab { padding: 10px 20px; cursor: pointer; font-size: 14px; color: var(--text-sub); border-bottom: 3px solid transparent; white-space: nowrap; }
@@ -106,8 +110,8 @@
 
 <script>
 /**
- * 人生履歷 核心引擎 (V13.7 Fixed)
- * 集成 Firebase 硬編碼參數與 Google Auth
+ * 人生履歷 核心引擎 (V13.9)
+ * 重點更新：背景自動同步至 Firebase、同步指示燈、無感跨裝置還原
  */
 const App = {
   DB_KEY: 'LIFE_RESUME_V12_DB', 
@@ -128,13 +132,13 @@ const App = {
     activeProfileId: 'parent_self',
     activeTab: 'overview',
     modalContext: null,
-    dialog: null
+    dialog: null,
+    isSyncing: false
   },
 
   init() {
     this.loadData();
     const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
-    // 如果沒有小孩且沒有密碼，直接 Bypass 登入
     if (childrenIds.length === 0 && !this.data.settings.password) {
         this.state.view = 'app';
         this.state.loginRole = 'parent';
@@ -155,8 +159,39 @@ const App = {
   saveData() {
     try {
       localStorage.setItem(this.DB_KEY, JSON.stringify(this.data));
+      // 自動同步邏輯：如果已登入，每次存檔自動備份
+      if(window.CloudSync?.isLoggedIn) {
+          this.triggerBackgroundSync();
+      }
     } catch (e) {
       this.showAlert('儲存失敗：本機存儲空間(LocalStorage)不足。');
+    }
+  },
+
+  async triggerBackgroundSync() {
+    if(this.state.isSyncing) return;
+    this.state.isSyncing = true;
+    this.updateSyncIndicator();
+    
+    const res = await window.CloudSync.backup(this.data);
+    
+    this.state.isSyncing = false;
+    if(res.success) {
+        this.data.settings.lastSync = Date.now();
+        localStorage.setItem(this.DB_KEY, JSON.stringify(this.data)); // 存入最後同步時間
+    }
+    this.updateSyncIndicator();
+  },
+
+  updateSyncIndicator() {
+    const el = document.getElementById('sync-indicator');
+    if(!el) return;
+    if(this.state.isSyncing) {
+        el.innerText = '● 同步中...';
+        el.className = 'sync-status syncing';
+    } else {
+        el.innerText = window.CloudSync?.isLoggedIn ? '● 雲端已連線' : '';
+        el.className = 'sync-status';
     }
   },
 
@@ -164,7 +199,7 @@ const App = {
     return this.data.profiles[this.state.activeProfileId];
   },
 
-  // 自定義 UI 彈窗 (Custom Dialog)
+  // 自定義 UI 彈窗
   showAlert(message) {
     this.state.dialog = { type: 'alert', message, onConfirm: () => { this.state.dialog = null; this.render(); } };
     this.render();
@@ -178,16 +213,17 @@ const App = {
     this.render();
   },
 
-  // 登入與身份切換
+  // 登入流程
   setLoginRole(role) {
     this.state.loginRole = role;
     this.render();
   },
   executeLogin() {
-    if (this.data.settings.password) {
+    const pwd = (this.data.settings.password || '').trim();
+    if (pwd) {
         const pwdInput = document.getElementById('login-pwd').value;
-        if (pwdInput !== this.data.settings.password) {
-          this.showAlert('密碼錯誤！');
+        if (pwdInput !== pwd) {
+          this.showAlert('密碼錯誤！請重新輸入。');
           return;
         }
     }
@@ -201,10 +237,15 @@ const App = {
     this.state.loginRole = '';
     this.init();
   },
+  factoryReset() {
+    this.showConfirm('警告：這將清除所有本機資料且無法復原。確定要執行「重置系統」嗎？', () => {
+        localStorage.removeItem(this.DB_KEY);
+        location.reload();
+    });
+  },
 
   addChild() {
     this.showPrompt("請輸入孩子姓名：", (name) => {
-      if (!name || !name.trim()) return;
       const newId = 'child_' + Date.now();
       this.data.profiles[newId] = {
         id: newId, name: name.trim(), role: 'child',
@@ -214,7 +255,7 @@ const App = {
       this.state.activeProfileId = newId;
       this.saveData();
       if (!this.data.settings.password) {
-          this.showConfirm("建議建立登入密碼，請問是否現在設定？", () => {
+          this.showConfirm("建議建立登入密碼保護資料隱私，請問是否現在設定？", () => {
              this.showPrompt("請輸入新密碼：", (pwd) => {
                  if(pwd.trim()){ this.data.settings.password = pwd.trim(); this.saveData(); this.showAlert("密碼建立成功！"); } else { this.render(); }
              });
@@ -245,7 +286,6 @@ const App = {
     input.click();
   },
 
-  // 列表操作 (CRUD)
   openModal(category, itemId = null) { this.state.modalContext = { category, itemId }; this.render(); },
   closeModal() { this.state.modalContext = null; this.render(); },
   saveModalItem() {
@@ -273,22 +313,6 @@ const App = {
     this.showConfirm('確定要刪除嗎？', () => { this.getProfile()[category] = this.getProfile()[category].filter(i => i.id !== itemId); this.saveData(); this.render(); });
   },
 
-  // 本機備份
-  exportLocalData() {
-    const blob = new Blob([JSON.stringify(this.data)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `LifeResume_Backup.json`; a.click();
-  },
-  importLocalData(event) {
-    const file = event.target.files[0]; if (!file) return;
-    this.showConfirm('警告：匯入資料將覆蓋本機現有數據，確定執行嗎？', () => {
-      const reader = new FileReader();
-      reader.onload = (e) => { this.data = JSON.parse(e.target.result); this.saveData(); location.reload(); };
-      reader.readAsText(file);
-    });
-  },
-
-  // 權限請求
   requestAccess(itemId) {
     this.showConfirm('確認要送出檢視請求嗎？', () => {
       const p = this.getProfile();
@@ -302,7 +326,20 @@ const App = {
     if(item) { item.visibility = 'visible'; this.saveData(); this.render(); }
   },
 
-  // 核心渲染
+  exportLocalData() {
+    const blob = new Blob([JSON.stringify(this.data)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `Resume_Backup.json`; a.click();
+  },
+  importLocalData(event) {
+    const file = event.target.files[0]; if (!file) return;
+    this.showConfirm('警告：將覆蓋本機資料，確定匯入？', () => {
+      const reader = new FileReader();
+      reader.onload = (e) => { this.data = JSON.parse(e.target.result); this.saveData(); location.reload(); };
+      reader.readAsText(file);
+    });
+  },
+
   render() {
     const root = document.getElementById('app-root');
     let html = (this.state.view === 'login') ? this.templateLogin() : (this.state.view === 'preview' ? this.templatePrintPreview() : this.templateApp());
@@ -314,18 +351,34 @@ const App = {
   templateLogin() {
     const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
     if (!this.state.loginRole && childrenIds.length > 0) {
-      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歷 V13.7</h2><button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:12px;" onclick="App.setLoginRole('parent')">本人登入</button><button class="btn btn-secondary btn-full" style="padding:12px;" onclick="App.setLoginRole('child')">孩子登入</button></div></div>`;
+      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歷 V13.9</h2>
+      <button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:12px;" onclick="App.setLoginRole('parent')">本人登入</button>
+      <button class="btn btn-secondary btn-full" style="padding:12px;" onclick="App.setLoginRole('child')">孩子登入</button>
+      <div style="margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
+        <button class="btn btn-google btn-full" onclick="window.CloudSync.loginRestore()">☁️ 使用 Google 帳號還原資料</button>
+      </div>
+      <button onclick="App.factoryReset()" style="margin-top:15px; color:#94a3b8; font-size:11px; background:none; border:none; text-decoration:underline; cursor:pointer;">重置系統資料</button>
+      </div></div>`;
     }
-    return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h3>${this.state.loginRole === 'parent' ? '本人登入' : '孩子登入'}</h3>${this.state.loginRole === 'child' ? `<select id="login-child-select">${childrenIds.map(id => `<option value="${id}">${this.data.profiles[id].name}</option>`).join('')}</select>` : ''}${this.data.settings.password ? `<input type="password" id="login-pwd" placeholder="請輸入密碼" style="text-align:center;">` : ''}<div class="grid-2" style="margin-top:15px;">${childrenIds.length > 0 ? `<button class="btn btn-secondary btn-full" onclick="App.setLoginRole('')">返回</button>` : '<div></div>'}<button class="btn btn-primary btn-full" onclick="App.executeLogin()">進入</button></div></div></div>`;
+    return `<div class="overlay"><div class="dialog-box" style="text-align:center;">
+    <h3>${this.state.loginRole === 'parent' ? '本人登入' : '孩子登入'}</h3>
+    ${this.state.loginRole === 'child' ? `<label style="font-size:12px; display:block; text-align:left; margin-bottom:5px;">選擇孩子帳號</label><select id="login-child-select">${childrenIds.map(id => `<option value="${id}">${this.data.profiles[id].name}</option>`).join('')}</select>` : ''}
+    ${this.data.settings.password ? `<input type="password" id="login-pwd" placeholder="請輸入密碼" style="text-align:center;">` : '<p style="font-size:13px; color:#64748b;">本機無密碼，直接進入</p>'}
+    <div class="grid-2" style="margin-top:15px;">
+    ${childrenIds.length > 0 ? `<button class="btn btn-secondary btn-full" onclick="App.setLoginRole('')">返回</button>` : '<div></div>'}
+    <button class="btn btn-primary btn-full" onclick="App.executeLogin()">進入</button>
+    </div>
+    <button onclick="App.factoryReset()" style="margin-top:25px; color:#94a3b8; font-size:11px; background:none; border:none; text-decoration:underline; cursor:pointer;">重置系統資料</button>
+    </div></div>`;
   },
 
   templateApp() {
     const p = this.getProfile();
     const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
     const age = p.basic.birthday ? Math.floor((Date.now() - new Date(p.basic.birthday).getTime()) / 31557600000) : 0;
-    const lifeBase = p.basic.gender === 'female' ? 87 : 81;
+    const lifeBase = p.basic.gender === 'female' ? 87 : 81; 
     const lifePct = Math.min(100, Math.round((age / lifeBase) * 100));
-    return `<div class="header"><div style="font-size:18px; font-weight:bold; color:var(--primary);">📖 ${p.name}</div><div style="display:flex; gap:10px; align-items:center;">${this.state.loginRole === 'parent' ? `<select onchange="App.switchProfile(this.value)" style="width:auto;"><option value="parent_self" ${p.id === 'parent_self' ? 'selected' : ''}>本人紀錄</option>${childrenIds.map(id => `<option value="${id}" ${p.id === id ? 'selected' : ''}>孩子：${this.data.profiles[id].name}</option>`).join('')}</select><button class="btn btn-primary btn-sm" onclick="App.addChild()">+孩子</button>` : `<span class="tag" style="background:var(--primary);">孩子視角</span>`}<button class="btn btn-secondary btn-sm" onclick="App.logout()">登出</button></div></div><div class="container"><div class="card" style="background: linear-gradient(135deg, #f0fdfa, #ffffff);"><div style="display:flex; justify-content:space-between; align-items:flex-end;"><div><div style="font-size:12px; font-weight:bold;">LIFE JOURNEY</div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${age} 歲 <span style="font-size:14px; color:#94a3b8; font-weight:normal;">/ 基準 ${lifeBase} 歲</span></div></div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${lifePct}%</div></div><div style="background:#e2e8f0; height:8px; border-radius:4px; margin-top:10px; overflow:hidden;"><div style="height:100%; background:var(--primary); width:${lifePct}%;"></div></div></div><div class="tabs-wrapper">${['overview:對比時間軸', 'basic:基本資料', 'history:經歷', 'skills:技能', 'plans:規劃', 'settings:同步與匯出'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.state.activeTab='${k}'; App.render()">${v}</div>`; }).join('')}</div><div id="tab-content">${this.renderTabContent(p)}</div></div>`;
+    return `<div class="header"><div style="font-size:18px; font-weight:bold; color:var(--primary); display:flex; align-items:center;">📖 ${p.name} <span id="sync-indicator" class="sync-status">${window.CloudSync?.isLoggedIn ? '● 已連線' : ''}</span></div><div style="display:flex; gap:10px; align-items:center;">${this.state.loginRole === 'parent' ? `<select onchange="App.switchProfile(this.value)" style="width:auto;"><option value="parent_self" ${p.id === 'parent_self' ? 'selected' : ''}>本人紀錄</option>${childrenIds.map(id => `<option value="${id}" ${p.id === id ? 'selected' : ''}>孩子：${this.data.profiles[id].name}</option>`).join('')}</select><button class="btn btn-primary btn-sm" onclick="App.addChild()">+孩子</button>` : `<span class="tag" style="background:var(--primary);">孩子視角</span>`}<button class="btn btn-secondary btn-sm" onclick="App.logout()">登出</button></div></div><div class="container"><div class="card" style="background: linear-gradient(135deg, #f0fdfa, #ffffff);"><div style="display:flex; justify-content:space-between; align-items:flex-end;"><div><div style="font-size:12px; font-weight:bold;">LIFE JOURNEY</div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${age} 歲 <span style="font-size:14px; color:#94a3b8; font-weight:normal;">/ 基準 ${lifeBase} 歲</span></div></div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${lifePct}%</div></div><div style="background:#e2e8f0; height:8px; border-radius:4px; margin-top:10px; overflow:hidden;"><div style="height:100%; background:var(--primary); width:${lifePct}%;"></div></div></div><div class="tabs-wrapper">${['overview:時間對比', 'basic:基本資料', 'history:經歷', 'skills:技能', 'plans:規劃', 'settings:同步/匯出'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.state.activeTab='${k}'; App.render()">${v}</div>`; }).join('')}</div><div id="tab-content">${this.renderTabContent(p)}</div></div>`;
   },
 
   renderTabContent(p) {
@@ -341,7 +394,8 @@ const App = {
            const color = (i.author === 'parent' && p.id !== 'parent_self') ? 'var(--plan-parent)' : 'var(--plan-my)';
            items.push({...i, catLabel: label, isPlan:true, color: color});
         } else {
-           items.push({ year: i.year, month: i.month, title: '🔒 隱藏目標', catLabel: '規劃', isPlan: true, color: '#cbd5e1' });
+           const label = (i.author === 'parent' && p.id !== 'parent_self') ? '家長期許' : '規劃';
+           items.push({ year: i.year, month: i.month, title: '🔒 隱藏目標', catLabel: label, isPlan: true, color: '#cbd5e1' });
         }
       });
       items.sort((a,b) => (parseInt(a.year)||0) - (parseInt(b.year)||0) || (parseInt(a.month)||0) - (parseInt(b.month)||0));
@@ -353,7 +407,7 @@ const App = {
     }
     if(tab === 'basic') {
       const b = p.basic;
-      return `<div class="card"><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img"><button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">移除</button>` : `<div style="width:100px; height:130px; border:1px dashed #ccc;"></div><button class="btn btn-primary btn-sm" onclick="App.uploadBasicPhoto()">相片</button>`}</div><div><label>姓名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)"><label>拼音</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)"><div class="grid-2"><div><label>性別</label><select onchange="App.updateBasic('gender', this.value)"><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label>生日</label><input type="date" value="${b.birthday||''}" onchange="App.updateBasic('birthday', this.value)"></div></div></div></div><div class="grid-2"><div><label>電話</label><input type="text" value="${b.phone||''}" onchange="App.updateBasic('phone', this.value)"></div><div><label>Email</label><input type="text" value="${b.email||''}" onchange="App.updateBasic('email', this.value)"></div></div><div><label>現住所</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)"></div></div>`;
+      return `<div class="card"><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img"><button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">移除</button>` : `<div style="width:100px; height:130px; border:1px dashed #ccc;"></div><button class="btn btn-primary btn-sm" onclick="App.uploadBasicPhoto()">相片</button>`}</div><div><label>姓名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)"><label>拼音</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)"><div class="grid-2"><div><label>性別</label><select onchange="App.updateBasic('gender', this.value)"><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label>生日</label><input type="date" value="${b.birthday||''}" onchange="App.updateBasic('birthday', this.value)"></div></div></div></div><div class="grid-2"><div><label>電話</label><input type="text" value="${b.phone||''}" onchange="App.updateBasic('phone', this.value)"></div><div><label>Email</label><input type="text" value="${b.email||''}" onchange="App.updateBasic('email', this.value)"></div></div><div><label>地址</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)"></div></div>`;
     }
     if(tab === 'history') return this.buildListUI('history', '學歷職歷');
     if(tab === 'skills') return this.buildListUI('skills', '技能證照');
@@ -363,7 +417,7 @@ const App = {
             const filtered = (p.plans||[]).filter(i => (i.author || 'parent') === author);
             return filtered.map(i => {
                 const isOwner = author === myRole;
-                if(isOwner || i.visibility === 'visible') return `<div class="list-item"><div class="item-content" onclick="${isOwner?`App.openModal('plans','${i.id}')`:''}"><div class="item-meta">${i.year}年 ${i.stage}</div><div class="item-title">${i.title}</div></div><button class="btn btn-danger btn-sm" onclick="App.deleteItem('plans','${i.id}')">刪</button></div>`;
+                if(isOwner || i.visibility === 'visible') return `<div class="list-item"><div class="item-content" onclick="${isOwner?`App.openModal('plans','${i.id}')`:''}"><div class="item-meta">${i.year}年 ${i.stage}</div><div class="item-title">${i.title}</div></div><button class="btn btn-danger btn-sm" onclick="App.deleteItem('plans','${i.id}')">刪除</button></div>`;
                 return `<div class="list-item">🔒 隱藏項目 <button class="btn btn-primary btn-sm" onclick="App.requestAccess('${i.id}')">${i.visibility==='requested'?'申請中':'請求'}</button></div>`;
             }).join('');
         };
@@ -371,7 +425,7 @@ const App = {
     }
     if(tab === 'settings') {
       const lastSyncStr = this.data.settings.lastSync ? new Date(this.data.settings.lastSync).toLocaleString() : '尚未同步';
-      return `<div class="card"><h3>Google 雲端同步</h3><div id="google-auth-area"><button class="btn btn-google btn-full" onclick="window.CloudSync.login()">登入 Google 帳號以啟用同步</button></div><div style="margin-top:10px; font-size:12px; color:var(--text-sub);">上次同步時間：${lastSyncStr}</div><div class="grid-2" style="margin-top:10px;"><button class="btn btn-primary" onclick="App.triggerCloudBackup()">備份 (Push)</button><button class="btn btn-success" onclick="App.triggerCloudRestore()">還原 (Pull)</button></div></div><div class="card"><h3>本機備份與匯出</h3><div class="grid-2"><button class="btn btn-secondary" onclick="App.exportLocalData()">匯出 .json</button><button class="btn btn-secondary" onclick="document.getElementById('inp-import-json').click()">匯入 .json</button><input type="file" id="inp-import-json" class="hidden" onchange="App.importLocalData(event)"></div><div style="margin-top:20px; border-top:1px solid #eee; padding-top:20px;"><label>JIS 履歷通勤時間</label><div class="grid-2"><div>時<input type="number" id="export-commute-hr" value="${p.basic.commuteHour||0}"></div><div>分<input type="number" id="export-commute-min" value="${p.basic.commuteMinute||0}"></div></div><button class="btn btn-primary btn-full" onclick="App.triggerPrintMode()">產生 JIS 履歷預覽</button></div></div>`;
+      return `<div class="card"><h3>Google 雲端同步</h3><div id="google-auth-area"><button class="btn btn-google btn-full" onclick="window.CloudSync.login()">連結 Google 帳號</button></div><div style="margin-top:10px; font-size:12px; color:var(--text-sub);">狀態：${window.CloudSync?.isLoggedIn ? '自動備份中' : '僅本機儲存'}<br>上次備份：${lastSyncStr}</div><div class="grid-2" style="margin-top:10px;"><button class="btn btn-primary" onclick="App.triggerBackgroundSync()">手動立即備份</button><button class="btn btn-success" onclick="App.triggerCloudRestore()">從雲端還原</button></div></div><div class="card"><h3>本機備份與匯出</h3><div class="grid-2"><button class="btn btn-secondary" onclick="App.exportLocalData()">匯出 .json</button><button class="btn btn-secondary" onclick="document.getElementById('inp-import-json').click()">匯入 .json</button><input type="file" id="inp-import-json" class="hidden" onchange="App.importLocalData(event)"></div><div style="margin-top:20px; border-top:1px solid #eee; padding-top:20px;"><label>JIS 通勤時間</label><div class="grid-2"><div>時<input type="number" id="export-commute-hr" value="${p.basic.commuteHour||0}"></div><div>分<input type="number" id="export-commute-min" value="${p.basic.commuteMinute||0}"></div></div><button class="btn btn-primary btn-full" onclick="App.triggerPrintMode()">產生 JIS 履歷預覽</button></div></div>`;
     }
   },
 
@@ -381,7 +435,7 @@ const App = {
     items.forEach(i => {
       html += `<div class="list-item"><div class="item-content" onclick="App.openModal('${cat}', '${i.id}')"><div class="item-meta">${i.year}年 ${i.stage||''}</div><div class="item-title">${i.title}</div></div><button class="btn btn-danger btn-sm" onclick="App.deleteItem('${cat}','${i.id}')">刪除</button></div>`;
     });
-    if(cat === 'skills') html += `<textarea rows="3" onchange="App.updateBasic('motivation', this.value)" placeholder="動機/特技">${this.getProfile().basic.motivation||''}</textarea>`;
+    if(cat === 'skills') html += `<textarea rows="3" onchange="App.updateBasic('motivation', this.value)" placeholder="志望動機/特技">${this.getProfile().basic.motivation||''}</textarea>`;
     return html + `</div>`;
   },
 
@@ -398,7 +452,7 @@ const App = {
   templatePrintPreview() {
     const p = this.getProfile(); const b = p.basic;
     const age = b.birthday ? Math.floor((Date.now() - new Date(b.birthday).getTime()) / 31557600000) : 0;
-    return `<div class="resume-preview-wrapper"><div class="print-actions"><button class="btn btn-secondary" onclick="App.state.view='app'; App.render()">返回</button><button class="btn btn-primary" onclick="window.print()">列印</button></div><div id="jis-resume-page"><h1>履歴書</h1><table class="jis-table"><tr><td colspan="4">ふりがな: ${b.furigana||''}</td><td rowspan="4" class="txt-center">${b.photo ? `<img src="${b.photo}" style="width:100%; height:100%; object-fit:cover;">` : '寫真'}</td></tr><tr><td colspan="4" style="font-size:20pt; font-weight:bold;">${p.name}</td></tr><tr><td colspan="4">${b.birthday||''} 生 (満 ${age} 歲)</td></tr><tr><td colspan="4">住所: ${b.address||''}</td></tr><tr><td colspan="5">電話: ${b.phone||''} / Email: ${b.email||''}</td></tr></table><table class="jis-table"><tr><th>年</th><th>月</th><th>履歴</th></tr>${p.history.map(i=>`<tr><td class="txt-center">${i.year}</td><td class="txt-center">${i.month}</td><td>${i.title}</td></tr>`).join('')}</table></div></div>`;
+    return `<div class="resume-preview-wrapper"><div class="print-actions"><button class="btn btn-secondary" onclick="App.state.view='app'; App.render()">返回</button><button class="btn btn-primary" onclick="window.print()">列印</button></div><div id="jis-resume-page"><h1>履歴書</h1><table class="jis-table"><tr><td colspan="4">ふりがな: ${b.furigana||''}</td><td rowspan="4" class="txt-center">${b.photo ? `<img src="${b.photo}" style="width:100%; height:100%; object-fit:cover;">` : '寫真'}</td></tr><tr><td colspan="4" style="font-size:20pt; font-weight:bold;">${p.name}</td></tr><tr><td colspan="4">${b.birthday||''} 生 (滿 ${age} 歲)</td></tr><tr><td colspan="4">住所: ${b.address||''}</td></tr><tr><td colspan="5">電話: ${b.phone||''} / Email: ${b.email||''}</td></tr></table><table class="jis-table"><tr><th>年</th><th>月</th><th>履歴</th></tr>${p.history.map(i=>`<tr><td class="txt-center">${i.year}</td><td class="txt-center">${i.month}</td><td>${i.title}</td></tr>`).join('')}</table></div></div>`;
   },
 
   templateDialog() {
@@ -410,12 +464,6 @@ const App = {
     return `<div class="custom-dialog-overlay"><div class="custom-dialog-box"><h3>${d.message}</h3>${inputHtml}<div style="margin-top:20px;">${btnsHtml}</div></div></div>`;
   },
 
-  async triggerCloudBackup() {
-    if(!window.CloudSync?.isLoggedIn) { this.showAlert("請先登入 Google"); return; }
-    const res = await window.CloudSync.backup(this.data);
-    if(res.success) { this.data.settings.lastSync = Date.now(); this.saveData(); this.showAlert("雲端備份成功"); } 
-    else this.showAlert("失敗: " + res.msg);
-  },
   async triggerCloudRestore() {
     if(!window.CloudSync?.isLoggedIn) { this.showAlert("請先登入 Google"); return; }
     this.showConfirm("還原會覆蓋目前資料，確定嗎？", async () => {
@@ -436,7 +484,6 @@ window.onload = () => App.init();
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-  // 硬編碼 Firebase Config
   const firebaseConfig = {
     "apiKey": "AIzaSyCU8FG-bGYIm5eX3RbEUNK8_UO3k1oXwyw",
     "authDomain": "curriculum-vitae-76c2b.firebaseapp.com",
@@ -459,11 +506,27 @@ window.onload = () => App.init();
       window.CloudSync.isLoggedIn = true;
       const area = document.getElementById('google-auth-area');
       if(area) area.innerHTML = `<div style="background:#f0fdf4; padding:10px; border-radius:6px; font-size:14px; color:#166534; display:flex; align-items:center; gap:8px;"><img src="${user.photoURL}" style="width:24px; height:24px; border-radius:50%;"> 已連結: ${user.displayName}</div>`;
+      App.updateSyncIndicator();
     }
   });
 
   window.CloudSync.login = () => signInWithPopup(auth, provider).catch(e => alert("登入失敗: " + e.message));
   
+  window.CloudSync.loginRestore = async () => {
+    try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        const res = await window.CloudSync.restoreWithUser(user);
+        if(res.success) {
+            localStorage.setItem('LIFE_RESUME_V12_DB', JSON.stringify(res.data));
+            alert("還原成功，即將重新載入。");
+            location.reload();
+        } else {
+            alert("雲端尚無備份資料。");
+        }
+    } catch(e) { alert("操作失敗: " + e.message); }
+  };
+
   window.CloudSync.backup = async (d) => {
     try { 
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData'), { 
@@ -476,8 +539,12 @@ window.onload = () => App.init();
   };
   
   window.CloudSync.restore = async () => {
+    return window.CloudSync.restoreWithUser(auth.currentUser);
+  };
+
+  window.CloudSync.restoreWithUser = async (user) => {
     try { 
-        const s = await getDoc(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData')); 
+        const s = await getDoc(doc(db, 'users', user.uid, 'life_resume', 'mainData')); 
         return s.exists() ? {success:true, data:JSON.parse(s.data().data)} : {success:false, msg:"雲端尚無備份資料"}; 
     }
     catch(e) { return {success:false, msg:e.message}; }
