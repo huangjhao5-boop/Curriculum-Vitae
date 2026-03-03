@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>人生履歴書 V16.8 (Self-Publish Enhanced)</title>
+  <title>人生履歴書 V16.9 (Identity & Sync Fix)</title>
   
   <!-- Chart.js for Radar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -170,8 +170,8 @@ const manifestStr = JSON.stringify({
 document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="data:application/manifest+json;charset=utf-8,${encodeURIComponent(manifestStr)}">`);
 
 /**
- * 人生履歴書 核心エンジン (V16.8)
- * 機能追加：日記・プランの公開状態トグル(One-click Publish)、モーダルでの初期公開設定
+ * 人生履歴書 核心エンジン (V16.9)
+ * 重大修正：引き継ぎ後のID不変化(アイデンティティ保持)、親子の権限厳密化
  */
 const STAGES = ['乳幼児期 (0-6歳)', '小学生 (7-12歳)', '中学生 (13-15歳)', '高校生 (16-18歳)', '大学/専門 (19-22歳)', '20代 (若手社会人)', '30代 (中堅)', '40代以降', '全期間共通'];
 const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニケーション', '専門資格'];
@@ -391,6 +391,9 @@ const App = {
     const id = isNew ? 'item_' + Date.now() : ctx.itemId;
     let itemData = { id };
     
+    // Auth role check - Ensure the author tag is strictly correct based on the viewing role
+    const currentAuthorRole = this.state.loginRole; // 'parent' or 'child'
+
     if (ctx.category === 'diary') {
         const dStr = document.getElementById('mod-date').value;
         if(!dStr) { this.showAlert("日付を入力してください。"); return; }
@@ -399,8 +402,9 @@ const App = {
         if(!itemData.title.trim()) { this.showAlert("内容を入力してください。"); return; }
         itemData.desc = ''; 
         itemData.visibility = document.getElementById('mod-visibility').value;
-        if(isNew) { itemData.author = this.state.loginRole; }
-        else { const ex = p.diary.find(i => i.id === id); itemData.author = ex.author || this.state.loginRole; }
+        
+        if(isNew) { itemData.author = currentAuthorRole; }
+        else { const ex = p.diary.find(i => i.id === id); itemData.author = ex.author || currentAuthorRole; }
     } else {
         itemData.year = parseInt(document.getElementById('mod-year').value) || '';
         itemData.month = parseInt(document.getElementById('mod-month').value) || '';
@@ -413,7 +417,7 @@ const App = {
         if(ctx.category === 'skills') itemData.dim = document.getElementById('mod-skill-dim').value;
         if(ctx.category === 'plans') {
            itemData.visibility = document.getElementById('mod-visibility').value;
-           if(isNew) { itemData.author = this.state.loginRole; itemData.status = 'active'; } 
+           if(isNew) { itemData.author = currentAuthorRole; itemData.status = 'active'; } 
            else { const ex = p.plans.find(i => i.id === id); itemData.author = ex.author; itemData.status = ex.status; }
         }
     }
@@ -427,7 +431,6 @@ const App = {
 
   deleteItem(category, itemId) { this.showConfirm('項目を削除しますか？', () => { this.getProfile()[category] = this.getProfile()[category].filter(i => i.id !== itemId); this.saveData(); this.render(); }); },
 
-  // 自主解鎖切換
   toggleVisibility(category, itemId) {
       const item = this.getProfile()[category].find(i => i.id === itemId);
       if(item) {
@@ -454,6 +457,7 @@ const App = {
   grantAccess(category, itemId) { const item = this.getProfile()[category].find(i => i.id === itemId); if(item) { item.visibility = 'visible'; this.saveData(); this.render(); } },
   requestAccess(category, itemId) { const item = this.getProfile()[category].find(i => i.id === itemId); if(item) { item.visibility = 'requested'; this.saveData(); this.render(); this.showAlert('表示リクエストを送信しました。'); } },
 
+  /* === 遊客本機資料復原/匯出 === */
   exportLocalData() {
     const blob = new Blob([JSON.stringify(this.data)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -525,22 +529,26 @@ const App = {
   },
 
   executeImport(profile, mode) {
+      const originalId = profile.id;
       if(mode === 'child') {
-          const newId = 'child_' + Date.now();
-          profile.id = newId; profile.role = 'child';
-          this.data.profiles[newId] = profile;
+          // As normal co-managed child
+          this.data.profiles[originalId] = profile;
           this.showAlert(`「${profile.name}」をお子様として追加し、共同編集を開始しました！`);
       } else {
-          profile.id = 'parent_self'; profile.role = 'parent'; profile.isClaimed = true; 
-          this.data.profiles['parent_self'] = profile;
-          this.state.activeProfileId = 'parent_self';
-          this.showAlert(`データを本人の記録として引き継ぎました！\n(以前の管理者は閲覧モードになります)`);
+          // Claim profile. Keep ID exact same to maintain perfect sync mappings.
+          profile.isClaimed = true; 
+          this.data.profiles[originalId] = profile;
+          this.state.activeProfileId = originalId;
+          this.state.loginRole = 'child'; // They are logging in as themselves (the subject)
+          this.state.loginChildId = originalId;
+          this.showAlert(`データを本人の記録として引き継ぎました！`);
       }
       this.saveData(); 
       if(window.CloudSync.isLoggedIn) window.CloudSync.listenToSharedProfiles(); 
       this.state.dialog = null; this.render();
   },
 
+  // 核心渲染
   render() {
     const root = document.getElementById('app-root');
     let html = (this.state.view === 'login') ? this.templateLogin() : (this.state.view === 'preview' ? this.templatePrintPreview() : this.templateApp());
@@ -618,7 +626,7 @@ const App = {
         inputHtml = `<select id="complete-cat-select" style="width:100%; margin-top:15px; padding:12px; border-radius:8px;"><option value="history">学歴・職歴</option><option value="skills">免許・資格</option><option value="achievements">表彰・出来事</option></select>`;
         btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button><button class="btn btn-success btn-full" onclick="App.confirmCompletePlan('${d.planId}', document.getElementById('complete-cat-select').value)">実績に追加</button></div>`;
     } else if (d.type === 'confirm_import') {
-        btns = `<div style="display:flex; flex-direction:column; gap:10px;"><button class="btn btn-primary btn-full" onclick="App.executeImport(App.state.dialog.profile, 'child')">👨‍👩‍👦 お子様として追加 (共同管理)</button><button class="btn btn-danger btn-full" onclick="App.executeImport(App.state.dialog.profile, 'parent')">🔄 本人の記録として上書き (引き継ぎ)</button><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button></div>`;
+        btns = `<div style="display:flex; flex-direction:column; gap:10px;"><button class="btn btn-primary btn-full" onclick="App.executeImport(App.state.dialog.profile, 'child')">👨‍👩‍👦 お子様として追加 (共同管理)</button><button class="btn btn-danger btn-full" onclick="App.executeImport(App.state.dialog.profile, 'parent')">🔄 本人の記録として引き継ぎ (成長独立)</button><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button></div>`;
     } else if (d.type === 'sync_conflict') {
         btns = `<div style="display:flex; flex-direction:column; gap:10px;">
           <button class="btn btn-success btn-full" onclick="App.resolveConflict('cloud')">☁️ クラウドのデータを使う<br><span style="font-size:10px;font-weight:normal;">(現在の端末データを上書き)</span></button>
@@ -635,10 +643,22 @@ const App = {
     const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
     
     if (!this.state.loginRole) {
-      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V16.8</h2>
-      <button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.setLoginRole('parent')">本人ログイン</button>
-      ${childrenIds.length > 0 ? `<button class="btn btn-secondary btn-full" style="padding:15px;" onclick="App.setLoginRole('child')">お子様ログイン</button>` : ''}
+      let loginBtns = '';
+      if (!App.isLocalDefault()) {
+          loginBtns += `<button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.setLoginRole('parent')">本人ログイン</button>`;
+      }
       
+      if (childrenIds.length > 0) {
+          if (App.isLocalDefault() && childrenIds.length === 1 && this.data.profiles[childrenIds[0]].isClaimed) {
+              const cid = childrenIds[0];
+              loginBtns += `<button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.state.loginChildId='${cid}'; App.setLoginRole('child')">${this.data.profiles[cid].name} (本人) ログイン</button>`;
+          } else {
+              loginBtns += `<button class="btn btn-secondary btn-full" style="padding:15px;" onclick="App.setLoginRole('child')">お子様ログイン</button>`;
+          }
+      }
+
+      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V16.9</h2>
+      ${loginBtns}
       <div style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
         <button class="btn btn-google btn-full" style="margin-bottom:10px;" onclick="window.CloudSync.login()"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" style="width:16px; margin-right:8px;"> Googleアカウントでログイン</button>
         <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px; margin-top:15px;">ゲスト・オフライン利用</p>
@@ -672,7 +692,7 @@ const App = {
       <div id="sync-indicator" class="sync-indicator" style="margin-left:10px;"></div>
       </div>
       <div style="display:flex; gap:10px; align-items:center;">
-        ${this.state.loginRole === 'parent' ? `<select onchange="App.switchProfile(this.value)" style="width:auto; margin:0;"><option value="parent_self" ${p.id === 'parent_self' ? 'selected' : ''}>本人の記録</option>${childrenIds.map(id => `<option value="${id}" ${p.id === id ? 'selected' : ''}>${this.data.profiles[id].name}</option>`).join('')}</select><button class="btn btn-primary btn-sm" onclick="App.addChild()">+子供</button>` : `<span class="tag" style="background:var(--primary);">閲覧モード</span>`}
+        ${this.state.loginRole === 'parent' ? `<select onchange="App.switchProfile(this.value)" style="width:auto; margin:0;"><option value="parent_self" ${p.id === 'parent_self' ? 'selected' : ''}>本人の記録</option>${childrenIds.map(id => `<option value="${id}" ${p.id === id ? 'selected' : ''}>${this.data.profiles[id].name}</option>`).join('')}</select><button class="btn btn-primary btn-sm" onclick="App.addChild()">+子供</button>` : `<span class="tag" style="background:var(--primary);">${p.isClaimed?'メイン':'閲覧モード'}</span>`}
         <button class="btn btn-secondary btn-sm" onclick="App.logout()">終了</button>
       </div>
     </div>
@@ -763,14 +783,14 @@ const App = {
         const requests = (p.plans||[]).filter(i => i.author === myRole && i.visibility === 'requested');
         let reqHtml = ''; if(requests.length > 0) reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3>承認待ちリクエスト</h3>${requests.map(r => `<div class="list-item"><div>${r.year}年: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('plans','${r.id}')">承認</button></div>`).join('')}</div>`;
         
-        const renderP = (author) => {
-            const filtered = (p.plans||[]).filter(i => (i.author || 'parent') === author);
+        const renderP = (authorFilter) => {
+            const filtered = (p.plans||[]).filter(i => (i.author || 'parent') === authorFilter);
             if(filtered.length === 0) return '<p style="text-align:center; font-size:13px; color:#999;">データなし</p>';
             return filtered.map(i => {
-                const isOwner = author === myRole;
+                const isOwner = i.author === myRole; // Only true owner can edit
                 if(isOwner || i.visibility === 'visible') {
                     const isCompleted = i.status === 'completed';
-                    const canEdit = !isReadOnly || isOwner; 
+                    const canEdit = isOwner; 
                     
                     const compBtn = (!isCompleted && isOwner) ? `<button class="btn btn-success btn-sm" onclick="event.stopPropagation(); App.triggerCompletePlan('${i.id}')">達成</button>` : '';
                     const visibilityBtn = isOwner ? `<button class="btn ${i.visibility === 'visible' ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="event.stopPropagation(); App.toggleVisibility('plans','${i.id}')">${i.visibility === 'visible' ? '🔓 公開中' : '🔒 非公開'}</button>` : '';
@@ -782,12 +802,31 @@ const App = {
             }).join('');
         };
 
-        let myTitle = '🎯 自分の目標・プラン'; let otherTitle = ''; let targetRole = myRole === 'parent' ? 'child' : 'parent';
-        if (p.id !== 'parent_self') {
-            if (myRole === 'parent') { myTitle = '🎯 お子様への期待'; otherTitle = 'お子様自身の目標'; } 
-            else { myTitle = '🎯 自分の目標・プラン'; otherTitle = '親からの期待'; }
+        let mainTitle = ''; let subTitle = ''; let mainAuthor = myRole; let subAuthor = myRole === 'parent' ? 'child' : 'parent';
+        
+        if (p.id === 'parent_self') {
+            mainTitle = '🎯 自分の目標・プラン';
+            subTitle = ''; 
+        } else {
+            if (myRole === 'parent') { 
+                mainTitle = '🎯 お子様への期待'; 
+                subTitle = 'お子様自身の目標'; 
+            } else { 
+                mainTitle = '🎯 自分の目標・プラン'; 
+                subTitle = '親からの期待'; 
+            }
         }
-        return topNotice + reqHtml + `<div class="grid-2"><div class="card" style="border-top:4px solid var(--plan-my);"><h3>${myTitle} <button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button></h3>${renderP(myRole)}</div>${p.id!=='parent_self'?`<div class="card" style="border-top:4px solid var(--plan-parent);"><h3>${otherTitle}</h3>${renderP(targetRole)}</div>`:''}</div>`;
+        
+        return topNotice + reqHtml + `<div class="grid-2">
+            <div class="card" style="border-top:4px solid var(--plan-my);">
+                <h3>${mainTitle} <button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button></h3>
+                ${renderP(mainAuthor)}
+            </div>
+            ${subTitle ? `<div class="card" style="border-top:4px solid var(--plan-parent);">
+                <h3>${subTitle}</h3>
+                ${renderP(subAuthor)}
+            </div>` : ''}
+        </div>`;
     }
 
     if(tab === 'settings') {
@@ -863,20 +902,22 @@ const App = {
     const requests = (p[cat]||[]).filter(i => i.author === myRole && i.visibility === 'requested');
     let reqHtml = '';
     if (requests.length > 0) {
-        reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3>承認待ちリクエスト</h3>${requests.map(r => `<div class="list-item"><div>${r.date}: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('${cat}', '${r.id}')">承認</button></div>`).join('')}</div>`;
+        reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3>承認待ちリクエスト</h3>${requests.map(r => `<div class="list-item"><div>${r.date}: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('${cat}', '${r.id}')">公開する</button></div>`).join('')}</div>`;
     }
 
     let html = `<div class="card" style="border-top:4px solid var(--diary-color);"><h3>${title} ${isReadOnly ? '' : `<button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button>`}</h3>`;
+    
     const filtered = [...(p[cat] || [])].sort((a,b) => (b.date > a.date ? 1 : -1));
     if (filtered.length === 0) html += `<p style="text-align:center; font-size:13px; color:#999;">記録がありません</p>`;
 
     filtered.forEach(i => {
       const isOwner = i.author === myRole;
       if (isOwner || i.visibility === 'visible') {
+          const canEdit = isOwner; 
           const visibilityBtn = isOwner ? `<button class="btn ${i.visibility === 'visible' ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="event.stopPropagation(); App.toggleVisibility('${cat}','${i.id}')">${i.visibility === 'visible' ? '🔓 公開中' : '🔒 非公開'}</button>` : '';
-          const actionBtns = isReadOnly ? '' : `<div style="display:flex; flex-direction:column; gap:5px; min-width:80px;">${visibilityBtn}<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button></div>`;
+          const actionBtns = `<div style="display:flex; flex-direction:column; gap:5px; min-width:80px;">${visibilityBtn}${canEdit?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button>`:''}</div>`;
 
-          html += `<div class="list-item"><div class="item-content" ${isReadOnly ? '' : `onclick="App.openModal('${cat}', '${i.id}')"`}><div class="item-meta" style="color:var(--diary-color); font-weight:bold;">${i.date}</div><div class="item-title" style="font-weight:normal; font-size:14px; white-space:pre-wrap;">${i.title}</div></div><div class="photo-wrapper" style="position:relative; margin-right:10px;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')">${isReadOnly ? '' : `<button class="btn btn-danger btn-sm" style="position:absolute; top:-8px; right:-8px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>`}` : (isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`)}</div>${actionBtns}</div>`;
+          html += `<div class="list-item"><div class="item-content" ${canEdit ? `onclick="App.openModal('${cat}', '${i.id}')"` : ''}><div class="item-meta" style="color:var(--diary-color); font-weight:bold;">${i.date}</div><div class="item-title" style="font-weight:normal; font-size:14px; white-space:pre-wrap;">${i.title}</div></div><div class="photo-wrapper" style="position:relative; margin-right:10px;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')">${canEdit ? `<button class="btn btn-danger btn-sm" style="position:absolute; top:-8px; right:-8px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>`:''}` : (canEdit ? `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`:'')}</div>${actionBtns}</div>`;
       } else {
           html += `<div class="list-item" style="align-items:center;"><div><span class="tag" style="background:#64748b;">${i.date}</span> 🔒 内容非公開</div> <button class="btn btn-primary btn-sm" onclick="App.requestAccess('${cat}', '${i.id}')">${i.visibility==='requested'?'要請中':'表示要請'}</button></div>`;
       }
