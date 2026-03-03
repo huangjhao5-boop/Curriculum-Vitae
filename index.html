@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>人生履歴書 V14.0 (JIS規格 & Google同期版)</title>
+  <title>人生履歴書 V14.3 (JIS規格 & 日本語ロジック修正版)</title>
   <style>
     /* =========================================
        1. 基本デザイン (Base Design)
@@ -89,7 +89,7 @@
     .custom-dialog-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center; }
     .custom-dialog-box { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; }
 
-    /* JIS Print */
+    /* JIS Print Layout */
     #jis-resume-page {
       background: white; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 10mm; font-family: "MS Mincho", "Hiragino Mincho ProN", serif; color: black; box-sizing: border-box;
     }
@@ -114,8 +114,8 @@
 
 <script>
 /**
- * 人生履歴書 核心エンジン (V14.0)
- * 修正点：全部日文化、JIS項目復旧、写真機能拡張、権限承認ロジック
+ * 人生履歴書 核心エンジン (V14.3)
+ * 修正点：Firebase匯入修正、日本語ロジック修正、免責事項、パスワード設定復旧
  */
 const App = {
   DB_KEY: 'LIFE_RESUME_V12_DB', 
@@ -165,7 +165,9 @@ const App = {
     try {
       localStorage.setItem(this.DB_KEY, JSON.stringify(this.data));
       if(window.CloudSync?.isLoggedIn) this.triggerBackgroundSync();
-    } catch (e) { this.showAlert('保存に失敗しました。ストレージの空き容量を確認してください。'); }
+    } catch (e) {
+      this.showAlert('データの保存に失敗しました。画像が大きすぎるか、ストレージ容量が不足しています。');
+    }
   },
 
   async triggerBackgroundSync() {
@@ -185,7 +187,7 @@ const App = {
     const el = document.getElementById('sync-indicator');
     if(!el) return;
     if(this.state.isSyncing) { el.innerText = '● 同期中...'; el.className = 'sync-status syncing'; }
-    else { el.innerText = window.CloudSync?.isLoggedIn ? '● 接続済み' : ''; el.className = 'sync-status'; }
+    else { el.innerText = window.CloudSync?.isLoggedIn ? '● 接続中' : ''; el.className = 'sync-status'; }
   },
 
   getProfile() { return this.data.profiles[this.state.activeProfileId]; },
@@ -208,7 +210,7 @@ const App = {
     const pwd = (this.data.settings.password || '').trim();
     if (pwd) {
         const pwdInput = document.getElementById('login-pwd').value;
-        if (pwdInput !== pwd) { this.showAlert('パスワードが違います。'); return; }
+        if (pwdInput !== pwd) { this.showAlert('認証に失敗しました。パスワードが正しくありません。'); return; }
     }
     this.state.view = 'app';
     if (this.state.loginRole === 'parent') this.state.activeProfileId = 'parent_self';
@@ -216,7 +218,7 @@ const App = {
     this.render();
   },
   logout() { this.state.view = 'login'; this.state.loginRole = ''; this.init(); },
-  
+
   addChild() {
     this.showPrompt("お子様の名前を入力してください：", (name) => {
       const newId = 'child_' + Date.now();
@@ -228,9 +230,9 @@ const App = {
       this.state.activeProfileId = newId;
       this.saveData();
       if (!this.data.settings.password) {
-          this.showConfirm("プライバシー保護のため、ログインパスワードの設定をお勧めします。設定しますか？", () => {
+          this.showConfirm("セキュリティのためパスワード設定を推奨します。今すぐ設定しますか？", () => {
              this.showPrompt("新しいパスワードを入力：", (pwd) => {
-                 if(pwd.trim()){ this.data.settings.password = pwd.trim(); this.saveData(); this.showAlert("設定完了！"); } else { this.render(); }
+                 if(pwd.trim()){ this.data.settings.password = pwd.trim(); this.saveData(); this.showAlert("設定が完了しました。"); } else { this.render(); }
              });
           });
       } else { this.render(); }
@@ -241,21 +243,36 @@ const App = {
   updateBasic(field, value) { this.getProfile().basic[field] = value; this.saveData(); },
   updateName(value) { this.getProfile().name = value; this.saveData(); this.render(); },
 
+  processImage(file, callback) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 400; 
+        let w = img.width, h = img.height;
+        if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+        else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  },
+
   uploadPhoto(target, category = null, itemId = null) {
     const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
+    input.type = 'file'; input.accept = 'image/*';
     input.onchange = (e) => {
-      const file = e.target.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if(target === 'basic') { this.getProfile().basic.photo = ev.target.result; }
-        else { const item = this.getProfile()[category].find(i => i.id === itemId); if(item) item.photo = ev.target.result; }
-        this.saveData();
-        this.render();
-      };
-      reader.readAsDataURL(file);
+      const file = e.target.files[0]; if(!file) return;
+      this.processImage(file, (data) => {
+        if(target === 'basic') this.getProfile().basic.photo = data;
+        else { const it = this.getProfile()[category].find(i => i.id === itemId); if(it) it.photo = data; }
+        this.saveData(); this.render();
+      });
     };
     input.click();
   },
@@ -264,8 +281,7 @@ const App = {
   closeModal() { this.state.modalContext = null; this.render(); },
   saveModalItem() {
     const ctx = this.state.modalContext; if(!ctx) return;
-    const p = this.getProfile();
-    const isNew = ctx.itemId === null;
+    const p = this.getProfile(); const isNew = ctx.itemId === null;
     const id = isNew ? 'item_' + Date.now() : ctx.itemId;
     const itemData = { 
       id, 
@@ -285,12 +301,12 @@ const App = {
   },
 
   deleteItem(category, itemId) {
-    this.showConfirm('削除しますか？', () => { this.getProfile()[category] = this.getProfile()[category].filter(i => i.id !== itemId); this.saveData(); this.render(); });
+    this.showConfirm('項目を削除してもよろしいですか？', () => { this.getProfile()[category] = this.getProfile()[category].filter(i => i.id !== itemId); this.saveData(); this.render(); });
   },
 
   requestAccess(itemId) {
     const item = this.getProfile().plans.find(i => i.id === itemId);
-    if(item) { item.visibility = 'requested'; this.saveData(); this.render(); this.showAlert('リクエストを送信しました。'); }
+    if(item) { item.visibility = 'requested'; this.saveData(); this.render(); this.showAlert('表示リクエストを送信しました。'); }
   },
   grantAccess(itemId) {
     const item = this.getProfile().plans.find(i => i.id === itemId);
@@ -304,10 +320,17 @@ const App = {
   },
   importLocalData(event) {
     const file = event.target.files[0]; if (!file) return;
-    this.showConfirm('警告：現在のデータが上書きされます。インポートしますか？', () => {
+    this.showConfirm('現在のデータが上書きされます。インポートを続行しますか？', () => {
       const reader = new FileReader();
       reader.onload = (e) => { this.data = JSON.parse(e.target.result); this.saveData(); location.reload(); };
       reader.readAsText(file);
+    });
+  },
+
+  clearAllData() {
+    this.showConfirm('【警告】すべてのデータが初期化されます。よろしいですか？', () => {
+        localStorage.removeItem(this.DB_KEY);
+        location.reload();
     });
   },
 
@@ -322,16 +345,16 @@ const App = {
   templateLogin() {
     const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
     if (!this.state.loginRole && childrenIds.length > 0) {
-      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V14.0</h2>
-      <button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:12px;" onclick="App.setLoginRole('parent')">本人としてログイン</button>
-      <button class="btn btn-secondary btn-full" style="padding:12px;" onclick="App.setLoginRole('child')">お子様としてログイン</button>
+      return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V14.3</h2>
+      <button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:12px;" onclick="App.setLoginRole('parent')">本人ログイン</button>
+      <button class="btn btn-secondary btn-full" style="padding:12px;" onclick="App.setLoginRole('child')">お子様ログイン</button>
       <div style="margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
-        <button class="btn btn-google btn-full" onclick="window.CloudSync.loginRestore()">☁️ Googleアカウントから復元</button>
+        <button class="btn btn-google btn-full" onclick="window.CloudSync.loginRestore()">☁️ クラウドから復元</button>
       </div></div></div>`;
     }
-    return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h3>${this.state.loginRole === 'parent' ? '本人ログイン' : 'お子様ログイン'}</h3>
-    ${this.state.loginRole === 'child' ? `<label style="font-size:12px; display:block; text-align:left;">アカウント選択</label><select id="login-child-select">${childrenIds.map(id => `<option value="${id}">${this.data.profiles[id].name}</option>`).join('')}</select>` : ''}
-    ${this.data.settings.password ? `<input type="password" id="login-pwd" placeholder="パスワードを入力" style="text-align:center;">` : '<p style="font-size:13px; color:#64748b;">パスワード未設定です</p>'}
+    return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h3>${this.state.loginRole === 'parent' ? '管理者認証' : 'お子様認証'}</h3>
+    ${this.state.loginRole === 'child' ? `<label style="font-size:12px; display:block; text-align:left;">対象者を選択</label><select id="login-child-select">${childrenIds.map(id => `<option value="${id}">${this.data.profiles[id].name}</option>`).join('')}</select>` : ''}
+    ${this.data.settings.password ? `<input type="password" id="login-pwd" placeholder="パスワードを入力" style="text-align:center;">` : '<p style="font-size:13px; color:#64748b;">パスワードは未設定です</p>'}
     <div class="grid-2" style="margin-top:15px;">
     ${childrenIds.length > 0 ? `<button class="btn btn-secondary btn-full" onclick="App.setLoginRole('')">戻る</button>` : '<div></div>'}
     <button class="btn btn-primary btn-full" onclick="App.executeLogin()">ログイン</button>
@@ -339,64 +362,89 @@ const App = {
   },
 
   templateApp() {
-    const p = this.getProfile();
-    const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
+    const p = this.getProfile(); const childrenIds = Object.keys(this.data.profiles).filter(k => k !== 'parent_self');
     const age = p.basic.birthday ? Math.floor((Date.now() - new Date(p.basic.birthday).getTime()) / 31557600000) : 0;
     const lifeBase = p.basic.gender === 'female' ? 87 : 81; 
     const lifePct = Math.min(100, Math.round((age / lifeBase) * 100));
-    return `<div class="header"><div style="font-size:18px; font-weight:bold; color:var(--primary); display:flex; align-items:center;">📖 ${p.name} <span id="sync-indicator" class="sync-status">${window.CloudSync?.isLoggedIn ? '● 接続済' : ''}</span></div><div style="display:flex; gap:10px; align-items:center;">${this.state.loginRole === 'parent' ? `<select onchange="App.switchProfile(this.value)" style="width:auto;"><option value="parent_self" ${p.id === 'parent_self' ? 'selected' : ''}>本人記録</option>${childrenIds.map(id => `<option value="${id}" ${p.id === id ? 'selected' : ''}>${this.data.profiles[id].name}</option>`).join('')}</select><button class="btn btn-primary btn-sm" onclick="App.addChild()">+子供</button>` : `<span class="tag" style="background:var(--primary);">お子様視点</span>`}<button class="btn btn-secondary btn-sm" onclick="App.logout()">ログアウト</button></div></div><div class="container"><div class="card" style="background: linear-gradient(135deg, #f0fdfa, #ffffff);"><div style="display:flex; justify-content:space-between; align-items:flex-end;"><div><div style="font-size:12px; font-weight:bold;">LIFE JOURNEY</div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${age} 歳 <span style="font-size:14px; color:#94a3b8; font-weight:normal;">/ 基準 ${lifeBase} 歳</span></div></div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${lifePct}%</div></div><div style="background:#e2e8f0; height:8px; border-radius:4px; margin-top:10px; overflow:hidden;"><div style="height:100%; background:var(--primary); width:${lifePct}%;"></div></div></div><div class="tabs-wrapper">${['overview:対比タイムライン', 'basic:基本情報(JIS)', 'history:学歴・職歴', 'skills:免許・資格', 'achievements:表彰・イベント', 'plans:ライフプラン', 'settings:設定・出力'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.state.activeTab='${k}'; App.render()">${v}</div>`; }).join('')}</div><div id="tab-content">${this.renderTabContent(p)}</div></div>`;
+    return `<div class="header"><div style="font-size:18px; font-weight:bold; color:var(--primary); display:flex; align-items:center;">📖 ${p.name} <span id="sync-indicator" class="sync-status">${window.CloudSync?.isLoggedIn ? '● 接続済' : ''}</span></div><div style="display:flex; gap:10px; align-items:center;">${this.state.loginRole === 'parent' ? `<select onchange="App.switchProfile(this.value)" style="width:auto;"><option value="parent_self" ${p.id === 'parent_self' ? 'selected' : ''}>本人の記録</option>${childrenIds.map(id => `<option value="${id}" ${p.id === id ? 'selected' : ''}>${this.data.profiles[id].name}</option>`).join('')}</select><button class="btn btn-primary btn-sm" onclick="App.addChild()">+子供</button>` : `<span class="tag" style="background:var(--primary);">閲覧モード</span>`}<button class="btn btn-secondary btn-sm" onclick="App.logout()">終了</button></div></div><div class="container"><div class="card" style="background: linear-gradient(135deg, #f0fdfa, #ffffff);"><div style="display:flex; justify-content:space-between; align-items:flex-end;"><div><div style="font-size:12px; font-weight:bold;">LIFE JOURNEY</div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${age} 歳 <span style="font-size:14px; color:#94a3b8; font-weight:normal;">/ 基準 ${lifeBase} 歳</span></div></div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${lifePct}%</div></div><div style="background:#e2e8f0; height:8px; border-radius:4px; margin-top:10px; overflow:hidden;"><div style="height:100%; background:var(--primary); width:${lifePct}%;"></div></div></div><div class="tabs-wrapper">${['overview:対比タイムライン', 'basic:基本情報(JIS)', 'history:学歴・職歴', 'skills:免許・資格', 'achievements:実績・出来事', 'plans:ライフプラン', 'settings:設定・出力'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.state.activeTab='${k}'; App.render()">${v}</div>`; }).join('')}</div><div id="tab-content">${this.renderTabContent(p)}</div></div>`;
   },
 
   renderTabContent(p) {
     const tab = this.state.activeTab;
     if(tab === 'overview') {
-      let items = [];
-      const catMap = { history:'経歴', skills:'資格', achievements:'実績', events:'出来事' };
+      let items = []; const catMap = { history:'経歴', skills:'資格', achievements:'実績', events:'出来事' };
       ['history', 'skills', 'achievements', 'events'].forEach(cat => (p[cat]||[]).forEach(i => items.push({...i, catLabel: catMap[cat], color: 'var(--primary)'})));
       (p.plans||[]).forEach(i => {
         const isOwner = i.author === this.state.loginRole;
         if(isOwner || i.visibility === 'visible') {
-           const label = (i.author === 'parent' && p.id !== 'parent_self') ? '保護者の期待' : 'プラン';
+           const label = (i.author === 'parent' && p.id !== 'parent_self') ? '親の期待' : 'プラン';
            const color = (i.author === 'parent' && p.id !== 'parent_self') ? 'var(--plan-parent)' : 'var(--plan-my)';
            items.push({...i, catLabel: label, isPlan:true, color: color});
-        } else {
-           items.push({ year: i.year, month: i.month, title: '🔒 隠された目標', catLabel: 'プラン', isPlan: true, color: '#cbd5e1' });
-        }
+        } else { items.push({ year: i.year, month: i.month, title: '🔒 未公開プラン', catLabel: 'プラン', isPlan: true, color: '#cbd5e1' }); }
       });
-      items.sort((a,b) => (parseInt(a.year)||0) - (parseInt(b.year)||0) || (parseInt(a.month)||0) - (parseInt(b.month)||0));
+      items.sort((a,b) => (parseInt(a.year)||0)-(parseInt(b.year)||0) || (parseInt(a.month)||0)-(parseInt(b.month)||0));
       let html = `<div class="timeline-dual">`;
       items.forEach(i => {
-        html += `<div class="tl-container ${i.isPlan?'tl-right':'tl-left'}"><div class="tl-dot" style="border-color: ${i.color};"></div><div class="tl-content" style="border-${i.isPlan ? 'left' : 'right'}: 4px solid ${i.color};"><div style="font-size:12px;"><span class="tag" style="background:${i.color}">${i.catLabel}</span> ${i.year||'?'}年</div><div style="font-weight:bold;">${i.title}</div>${i.desc?`<div style="font-size:12px;">${i.desc}</div>`:''}${i.photo?`<img src="${i.photo}" style="width:100px; margin-top:5px; border-radius:4px;">`:''}</div></div>`;
+        const side = i.isPlan ? 'tl-right' : 'tl-left';
+        html += `<div class="tl-container ${side}"><div class="tl-dot" style="border-color: ${i.color};"></div><div class="tl-content" style="border-${i.isPlan?'left':'right'}:4px solid ${i.color};"><div style="font-size:12px;"><span class="tag" style="background:${i.color}">${i.catLabel}</span> ${i.year||'?'}年</div><div style="font-weight:bold;">${i.title}</div>${i.desc?`<div style="font-size:12px;">${i.desc}</div>`:''}${i.photo?`<img src="${i.photo}" style="width:100px; margin-top:5px; border-radius:4px;">`:''}</div></div>`;
       });
       return html + `</div>`;
     }
     if(tab === 'basic') {
       const b = p.basic;
-      return `<div class="card"><div class="card-title">JIS 基礎情報</div><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img"><button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">削除</button>` : `<div style="width:100px; height:130px; border:1px dashed #ccc;"></div><button class="btn btn-primary btn-sm" onclick="App.uploadPhoto('basic')">写真アップ</button>`}</div><div><label>氏名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)"><label>ふりがな</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)"><div class="grid-2"><div><label>性別</label><select onchange="App.updateBasic('gender', this.value)"><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label>生年月日</label><input type="date" value="${b.birthday||''}" onchange="App.updateBasic('birthday', this.value)"></div></div></div></div><div class="grid-2"><div><label>電話番号</label><input type="text" value="${b.phone||''}" onchange="App.updateBasic('phone', this.value)"></div><div><label>メールアドレス</label><input type="text" value="${b.email||''}" onchange="App.updateBasic('email', this.value)"></div></div><div class="grid-2"><div><label>郵便番号</label><input type="text" value="${b.postalCode||''}" onchange="App.updateBasic('postalCode', this.value)"></div><div><label>現住所</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)"></div></div><div class="grid-2"><div><label>配偶者</label><select onchange="App.updateBasic('spouse', this.value)"><option value="no" ${b.spouse==='no'?'selected':''}>無</option><option value="yes" ${b.spouse==='yes'?'selected':''}>有</option></select></div><div><label>扶養家族数 (除配偶者)</label><input type="number" value="${b.dependents||0}" onchange="App.updateBasic('dependents', this.value)"></div></div></div>`;
+      return `<div class="card"><div class="card-title">JIS 標準項目</div><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img"><button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">削除</button>` : `<div style="width:100px; height:130px; border:1px dashed #ccc;"></div><button class="btn btn-primary btn-sm" onclick="App.uploadPhoto('basic')">写真アップ</button>`}</div><div><label>氏名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)"><label>ふりがな</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)"><div class="grid-2"><div><label>性別</label><select onchange="App.updateBasic('gender', this.value)"><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label>生年月日</label><input type="date" value="${b.birthday||''}" onchange="App.updateBasic('birthday', this.value)"></div></div></div></div><div class="grid-2"><div><label>電話番号</label><input type="text" value="${b.phone||''}" onchange="App.updateBasic('phone', this.value)"></div><div><label>メールアドレス</label><input type="text" value="${b.email||''}" onchange="App.updateBasic('email', this.value)"></div></div><div class="grid-2"><div><label>郵便番号</label><input type="text" value="${b.postalCode||''}" onchange="App.updateBasic('postalCode', this.value)"></div><div><label>現住所</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)"></div></div><div class="grid-2"><div><label>配偶者</label><select onchange="App.updateBasic('spouse', this.value)"><option value="no" ${b.spouse==='no'?'selected':''}>無</option><option value="yes" ${b.spouse==='yes'?'selected':''}>有</option></select></div><div><label>扶養家族数 (除配偶者)</label><input type="number" value="${b.dependents||0}" onchange="App.updateBasic('dependents', this.value)"></div></div></div>`;
     }
     if(tab === 'history') return this.buildListUI('history', '学歴・職歴');
     if(tab === 'skills') return this.buildListUI('skills', '免許・資格');
-    if(tab === 'achievements') return this.buildListUI('achievements', '特殊成就・表彰') + this.buildListUI('events', '人生の出来事');
+    if(tab === 'achievements') return this.buildListUI('achievements', '実績・出来事');
     if(tab === 'plans') {
-        const myRole = this.state.loginRole;
+        const myRole = this.state.loginRole; const requests = (p.plans||[]).filter(i => i.author === myRole && i.visibility === 'requested');
+        let reqHtml = ''; if(requests.length > 0) { reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3 style="color:#c2410c; margin-top:0;">承認待ちのリクエスト</h3>${requests.map(r => `<div class="list-item"><div>${r.year}年: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('${r.id}')">公開を承認</button></div>`).join('')}</div>`; }
         const renderP = (author) => {
             const filtered = (p.plans||[]).filter(i => (i.author || 'parent') === author);
             return filtered.map(i => {
                 const isOwner = author === myRole;
                 if(isOwner || i.visibility === 'visible') return `<div class="list-item"><div class="item-content" onclick="${isOwner?`App.openModal('plans','${i.id}')`:''}"><div class="item-meta">${i.year}年 ${i.stage}</div><div class="item-title">${i.title}</div></div><button class="btn btn-danger btn-sm" onclick="App.deleteItem('plans','${i.id}')">削除</button></div>`;
-                return `<div class="list-item">🔒 内容は非公開 <button class="btn btn-primary btn-sm" onclick="App.requestAccess('${i.id}')">${i.visibility==='requested'?'リクエスト中':'表示リクエスト'}</button></div>`;
+                return `<div class="list-item">🔒 内容は非公開 <button class="btn btn-primary btn-sm" onclick="App.requestAccess('${i.id}')">${i.visibility==='requested'?'要請中':'表示要請'}</button></div>`;
             }).join('');
         };
-        const requests = (p.plans||[]).filter(i => i.author === myRole && i.visibility === 'requested');
-        let reqHtml = '';
-        if(requests.length > 0) {
-            reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3 style="color:#c2410c; margin-top:0;">承認待ちのリクエスト</h3>${requests.map(r => `<div class="list-item"><div>${r.year}年: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('${r.id}')">承認して公開</button></div>`).join('')}</div>`;
-        }
-        return reqHtml + `<div class="grid-2"><div class="card"><h3>自分のプラン <button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button></h3>${renderP(myRole)}</div>${p.id!=='parent_self'?`<div class="card"><h3>${myRole==='parent'?'お子様のプラン':'保護者の期待'}</h3>${renderP(myRole==='parent'?'child':'parent')}</div>`:''}</div>`;
+        return reqHtml + `<div class="grid-2"><div class="card"><h3>自分のプラン <button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button></h3>${renderP(myRole)}</div>${p.id!=='parent_self'?`<div class="card"><h3>${myRole==='parent'?'お子様への期待':'親が設定したプラン'}</h3>${renderP(myRole==='parent'?'child':'parent')}</div>`:''}</div>`;
     }
     if(tab === 'settings') {
       const lastSyncStr = this.data.settings.lastSync ? new Date(this.data.settings.lastSync).toLocaleString() : '未同期';
-      return `<div class="card"><h3>Google 同期</h3><div id="google-auth-area"><button class="btn btn-google btn-full" onclick="window.CloudSync.login()">Googleアカウントを連携</button></div><div style="margin-top:10px; font-size:12px; color:var(--text-sub);">最終同期：${lastSyncStr}</div><div class="grid-2" style="margin-top:10px;"><button class="btn btn-primary" onclick="App.triggerBackgroundSync()">今すぐバックアップ</button><button class="btn btn-success" onclick="App.triggerCloudRestore()">クラウドから復元</button></div></div><div class="card"><h3>JIS 履歴書出力設定</h3><p style="font-size:12px; color:var(--text-sub);">出力したい項目にチェックを入れ、通勤時間を入力してください。</p><div class="export-check-list" id="export-history-list">${p.history.map(i=>`<div class="export-check-item"><input type="checkbox" id="chk_${i.id}" value="${i.id}" checked><label for="chk_${i.id}">${i.year}年: ${i.title}</label></div>`).join('')}</div><div class="grid-2"><div>時<input type="number" id="export-commute-hr" value="${p.basic.commuteHour||0}"></div><div>分<input type="number" id="export-commute-min" value="${p.basic.commuteMinute||0}"></div></div><button class="btn btn-primary btn-full" onclick="App.triggerPrintMode()">JIS履歴書 プレビュー表示</button></div><div class="card" style="font-size:12px; color:var(--text-sub);"><h3>免責事項</h3><p>本アプリはキャリア管理および家族間の目標共有を目的としています。データの正確性については利用者の責任において管理してください。システム障害によるデータ損失について、開発者は一切の責任を負いません。<br><br>Producer: M.K(TW)</p></div>`;
+      return `
+        <div class="card">
+          <h3>セキュリティ設定</h3>
+          <p style="font-size:12px; color:var(--text-sub);">ログインパスワードを更新します。空欄の場合はパスワードなしになります。</p>
+          <div class="grid-2">
+            <input type="password" id="new-sys-pwd" placeholder="新しいパスワードを入力">
+            <button class="btn btn-primary" onclick="const v=document.getElementById('new-sys-pwd').value; App.data.settings.password=v; App.saveData(); App.showAlert('パスワードを更新しました。');">パスワード変更</button>
+          </div>
+        </div>
+        <div class="card" style="background:#e0f2fe;">
+          <h3>Google クラウド同期</h3>
+          <div id="google-auth-area"><button class="btn btn-google btn-full" onclick="window.CloudSync.login()">アカウントを連携する</button></div>
+          <div style="margin-top:10px; font-size:12px; color:var(--text-sub);">最終同期：${lastSyncStr}</div>
+          <div class="grid-2" style="margin-top:10px;">
+            <button class="btn btn-primary" onclick="App.triggerBackgroundSync()">今すぐバックアップ</button>
+            <button class="btn btn-success" onclick="App.triggerCloudRestore()">クラウドから復元</button>
+          </div>
+        </div>
+        <div class="card" style="background:#fffbeb;">
+          <h3>JIS 履歴書出力設定</h3>
+          <p style="font-size:12px; color:var(--text-sub);">出力したい項目にチェックを入れ、通勤時間を入力してください。</p>
+          <div class="export-check-list" id="export-history-list">${p.history.map(i=>`<div class="export-check-item"><input type="checkbox" id="chk_${i.id}" value="${i.id}" checked><label for="chk_${i.id}">${i.year}年: ${i.title}</label></div>`).join('')}</div>
+          <div class="grid-2"><div>時<input type="number" id="export-commute-hr" value="${p.basic.commuteHour||0}"></div><div>分<input type="number" id="export-commute-min" value="${p.basic.commuteMinute||0}"></div></div>
+          <button class="btn btn-primary btn-full" onclick="App.triggerPrintMode()">JIS履歴書を作成</button>
+        </div>
+        <div class="card" style="border-color:var(--danger); background:#fff1f2;">
+          <h3 style="color:var(--danger);">メンテナンス</h3>
+          <button class="btn btn-danger btn-full" onclick="App.clearAllData()">⚠️ すべてのデータを削除 (初期化)</button>
+        </div>
+        <div class="card" style="font-size:12px; color:var(--text-sub);">
+          <h3 style="margin-top:0;">免責事項</h3>
+          <p>本アプリケーションの利用によって生じた損害等について、開発者は一切の責任を負いません。本アプリはブラウザのLocalStorageを使用しており、シークレットモードやキャッシュ削除によりデータが消える可能性があります。定期的なバックアップを推奨します。<br><br>Producer: M.K(TW)</p>
+        </div>`;
     }
   },
 
@@ -413,58 +461,51 @@ const App = {
   templateModal() {
     const ctx = this.state.modalContext; const p = this.getProfile(); const isNew = ctx.itemId === null;
     const item = isNew ? {} : p[ctx.category].find(i => i.id === ctx.itemId);
-    return `<div class="modal-overlay overlay"><div class="modal-box"><h3>記録の編集</h3><label>ライフステージ</label><select id="mod-stage">${['幼少','小教','中教','高教','大学','社会','壮年','共通'].map(s => `<option value="${s}" ${item.stage===s?'selected':''}>${s}</option>`).join('')}</select><div class="grid-2"><div><label>西暦</label><input type="number" id="mod-year" value="${item.year||''}" placeholder="2025"></div><div><label>月</label><input type="number" id="mod-month" value="${item.month||''}" placeholder="3"></div></div><label>タイトル</label><input type="text" id="mod-title" value="${item.title||''}" placeholder="内容を入力"><label>詳細・備考</label><textarea id="mod-desc" rows="4">${item.desc||''}</textarea><div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
+    return `<div class="modal-overlay overlay"><div class="modal-box"><h3>${isNew?'新規追加':'編集'}</h3><label>ライフステージ</label><select id="mod-stage">${['幼少','小教','中教','高教','大学','社会','壮年','共通'].map(s => `<option value="${s}" ${item.stage===s?'selected':''}>${s}</option>`).join('')}</select><div class="grid-2"><div><label>年 (西暦)</label><input type="number" id="mod-year" value="${item.year||''}" placeholder="2025"></div><div><label>月</label><input type="number" id="mod-month" value="${item.month||''}" placeholder="3"></div></div><label>内容</label><input type="text" id="mod-title" value="${item.title||''}" placeholder="入力してください"><label>備考</label><textarea id="mod-desc" rows="4">${item.desc||''}</textarea><div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
   },
 
   triggerPrintMode() {
-    const getCheckedIds = (listId) => Array.from(document.getElementById(listId).querySelectorAll('input:checked')).map(i => i.value);
-    this.state.printFilter = { history: getCheckedIds('export-history-list') };
-    const hr = document.getElementById('export-commute-hr'); const min = document.getElementById('export-commute-min');
-    if(hr) this.getProfile().basic.commuteHour = hr.value;
-    if(min) this.getProfile().basic.commuteMinute = min.value;
+    const getCheck = (id) => Array.from(document.getElementById(id).querySelectorAll('input:checked')).map(i => i.value);
+    this.state.printFilter = { history: getCheck('export-history-list') };
+    const hr = document.getElementById('export-commute-hr'), min = document.getElementById('export-commute-min');
+    if(hr) this.getProfile().basic.commuteHour = hr.value; if(min) this.getProfile().basic.commuteMinute = min.value;
     this.saveData(); this.state.view = 'preview'; this.render();
-    setTimeout(() => { window.print(); }, 800);
+    setTimeout(() => window.print(), 800);
   },
 
   templatePrintPreview() {
-    const p = this.getProfile(); const b = p.basic;
-    const fIds = this.state.printFilter || { history:[] };
+    const p = this.getProfile(); const b = p.basic; const fIds = this.state.printFilter || { history:[] };
     const hItems = p.history.filter(i => fIds.history.includes(i.id)).sort((a,b)=>a.year-b.year);
     const age = b.birthday ? Math.floor((Date.now() - new Date(b.birthday).getTime()) / 31557600000) : 0;
     const commute = `約 ${b.commuteHour||0} 時間 ${b.commuteMinute||0} 分`;
-    
-    return `<div class="resume-preview-wrapper"><div class="print-actions"><button class="btn btn-secondary" onclick="App.state.view='app'; App.render()">戻る</button><button class="btn btn-primary" onclick="window.print()">印刷実行</button></div>
+    const buildRows = (items, min) => {
+        let h = items.map(i => `<tr><td class="txt-center">${i.year}</td><td class="txt-center">${i.month}</td><td>${i.title}</td></tr>`).join('');
+        for(let k=items.length; k<min; k++) h += `<tr><td>&nbsp;</td><td></td><td></td></tr>`; return h;
+    };
+    return `<div class="resume-preview-wrapper"><div class="print-actions"><button class="btn btn-secondary" onclick="App.state.view='app'; App.render()">戻る</button><button class="btn btn-primary" onclick="window.print()">印刷</button></div>
     <div id="jis-resume-page">
       <div style="display:flex; justify-content:space-between; border-bottom:2px solid black;"><h1>履 歴 書</h1><span>${new Date().toLocaleDateString()} 現在</span></div>
       <table class="jis-table">
-        <tr><td colspan="4" class="border-dash">ふりがな: ${b.furigana}</td><td rowspan="4" class="txt-center">${b.photo ? `<img src="${b.photo}" style="width:100%; height:100%; object-fit:cover;">` : '写真貼付'}</td></tr>
+        <tr><td colspan="4" class="border-dash">ふりがな: ${b.furigana}</td><td rowspan="4" class="txt-center" style="width:40mm;">${b.photo?`<img src="${b.photo}" style="width:100%; height:100%; object-fit:cover;">`:'写真貼付'}</td></tr>
         <tr><td colspan="4" style="font-size:24pt; font-weight:bold; height:18mm;">${p.name}</td></tr>
         <tr><td colspan="4">${b.birthday} 生 (満 ${age} 歳) / 性別: ${b.gender==='male'?'男':'女'}</td></tr>
         <tr><td colspan="4">現住所: ${b.address}</td></tr>
         <tr><td colspan="5">電話: ${b.phone} / Email: ${b.email}</td></tr>
       </table>
-      <table class="jis-table"><tr style="background:#eee;"><th>年</th><th>月</th><th>学歴・職歴</th></tr>
-        ${hItems.map(i=>`<tr><td class="txt-center">${i.year}</td><td class="txt-center">${i.month}</td><td>${i.title}</td></tr>`).join('')}
-        ${Array(Math.max(0, 10-hItems.length)).fill('<tr><td>&nbsp;</td><td></td><td></td></tr>').join('')}
-      </table>
-      <table class="jis-table"><tr style="background:#eee;"><th>年</th><th>月</th><th>免許・資格</th></tr>
-        ${p.skills.map(i=>`<tr><td class="txt-center">${i.year}</td><td class="txt-center">${i.month}</td><td>${i.title}</td></tr>`).join('')}
-      </table>
+      <table class="jis-table"><tr style="background:#eee;"><th>年</th><th>月</th><th>学歴・職歴 (各別にまとめて書く)</th></tr>${buildRows(hItems, 10)}</table>
+      <table class="jis-table"><tr style="background:#eee;"><th>年</th><th>月</th><th>免許・資格</th></tr>${buildRows(p.skills, 6)}</table>
       <table class="jis-table"><tr><td style="height:30mm; vertical-align:top;"><b>志望の動機、特技、アピールポイント</b><br>${b.motivation||''}</td></tr></table>
-      <table class="jis-table"><tr><td>通勤時間: ${commute}</td><td>扶養家族数: ${b.dependents}人 / 配偶者: ${b.spouse==='yes'?'有':'無'}</td></tr></table>
+      <table class="jis-table"><tr><td width="50%">通勤時間: ${commute}</td><td>扶養家族数: ${b.dependents}人 / 配偶者: ${b.spouse==='yes'?'有':'無'}</td></tr></table>
     </div></div>`;
   },
 
   templateDialog() {
-    const d = this.state.dialog;
-    const inputHtml = d.type === 'prompt' ? `<input type="text" id="dialog-input" style="width:100%; margin-top:15px; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">` : '';
-    const btnsHtml = d.type === 'alert' 
-      ? `<button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm()">確認</button>`
-      : `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog.onCancel()">キャンセル</button><button class="btn btn-primary btn-full" onclick="const inp=document.getElementById('dialog-input'); App.state.dialog.onConfirm(inp ? inp.value : null)">確定</button></div>`;
-    return `<div class="custom-dialog-overlay"><div class="custom-dialog-box"><h3>${d.message}</h3>${inputHtml}<div style="margin-top:20px;">${btnsHtml}</div></div></div>`;
+    const d = this.state.dialog; const inp = d.type === 'prompt' ? `<input type="text" id="dialog-input" style="width:100%; margin-top:15px; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">` : '';
+    const btns = d.type === 'alert' ? `<button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm()">確認</button>` : `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog.onCancel()">キャンセル</button><button class="btn btn-primary btn-full" onclick="const v=document.getElementById('dialog-input'); App.state.dialog.onConfirm(v?v.value:null)">確定</button></div>`;
+    return `<div class="custom-dialog-overlay"><div class="custom-dialog-box"><h3>${d.message}</h3>${inp}<div style="margin-top:20px;">${btns}</div></div></div>`;
   },
 
-  deleteItemPhoto(cat, id) { this.showConfirm("写真を削除しますか？", () => { const i = this.getProfile()[cat].find(x=>x.id===id); if(i) i.photo = null; this.saveData(); }); }
+  deleteItemPhoto(cat, id) { this.showConfirm("写真を削除しますか？", () => { const i=this.getProfile()[cat].find(x=>x.id===id); if(i) i.photo=null; this.saveData(); }); }
 };
 window.onload = () => App.init();
 </script>
@@ -472,7 +513,7 @@ window.onload = () => App.init();
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  import { getFirestore as getFS, doc as dFS, setDoc as sFS, getDoc as gFS, serverTimestamp as tsFS } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
   const fbConfig = {
     "apiKey": "AIzaSyCU8FG-bGYIm5eX3RbEUNK8_UO3k1oXwyw",
@@ -484,28 +525,16 @@ window.onload = () => App.init();
     "measurementId": "G-FCV4JLFVX8"
   };
 
-  const app = initializeApp(fbConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  const provider = new GoogleAuthProvider();
+  const app = initializeApp(fbConfig); const auth = getAuth(app); const db = getFS(app); const provider = new GoogleAuthProvider();
 
   window.CloudSync = { isLoggedIn: false };
-
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      window.CloudSync.isLoggedIn = true;
-      const area = document.getElementById('google-auth-area');
-      if(area) area.innerHTML = `<div style="background:#f0fdf4; padding:10px; border-radius:6px; font-size:14px; color:#166534; display:flex; align-items:center; gap:8px;"><img src="${user.photoURL}" style="width:24px; height:24px; border-radius:50%;"> 連携済み: ${user.displayName}</div>`;
-      App.updateSyncIndicator();
-    }
-  });
-
-  window.CloudSync.login = () => signInWithPopup(auth, provider).catch(e => alert("失敗: " + e.message));
+  onAuthStateChanged(auth, (u) => { if(u) { window.CloudSync.isLoggedIn = true; App.render(); App.updateSyncIndicator(); } });
+  window.CloudSync.login = () => signInWithPopup(auth, provider).catch(e => alert(e.message));
   
   window.CloudSync.loginRestore = async () => {
     try {
         const result = await signInWithPopup(auth, provider);
-        const s = await getDoc(doc(db, 'users', result.user.uid, 'life_resume', 'mainData')); 
+        const s = await gFS(dFS(db, 'users', result.user.uid, 'life_resume', 'mainData')); 
         if(s.exists()) {
             localStorage.setItem('LIFE_RESUME_V12_DB', JSON.stringify(JSON.parse(s.data().data)));
             alert("復元完了。再読み込みします。");
@@ -515,14 +544,14 @@ window.onload = () => App.init();
   };
 
   window.CloudSync.backup = async (d) => {
-    try { await setDoc(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData'), { data: JSON.stringify(d), ts: serverTimestamp() }); return {success:true}; }
-    catch(e) { return {success:false, msg:e.message}; }
+    try { await sFS(dFS(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData'), { data: JSON.stringify(d), ts: tsFS() }); return {success:true}; }
+    catch(e){ return {success:false, msg:e.message}; }
   };
   
   window.CloudSync.restore = async () => {
     try { 
-        const s = await getDoc(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData')); 
-        return s.exists() ? {success:true, data:JSON.parse(s.data().data)} : {success:false, msg:"データなし"}; 
+        const s = await gFS(dFS(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData')); 
+        return s.exists() ? {success:true, data:JSON.parse(s.data().data)} : {success:false, msg: "データなし"}; 
     } catch(e) { return {success:false, msg:e.message}; }
   };
 </script>
