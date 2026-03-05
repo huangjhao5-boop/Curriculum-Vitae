@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>人生履歴書 V17.3 (Relationship Engine Perfected)</title>
+  <title>人生履歴書 V17.4 (Absolute ID & Perfect UI)</title>
   
   <!-- Chart.js for Radar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -170,8 +170,8 @@ const manifestStr = JSON.stringify({
 document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="data:application/manifest+json;charset=utf-8,${encodeURIComponent(manifestStr)}">`);
 
 /**
- * 人生履歴書 核心エンジン (V17.3)
- * 最終修正：相関関係(subject/parent)に基づく完璧な目標・権限管理とタイムゾーン修正
+ * 人生履歴書 核心エンジン (V17.4)
+ * 最終修正：絶対IDによる権限管理、UIの完全双方向対応、タイムゾーン修正、保存バグの修正
  */
 const STAGES = ['乳幼児期 (0-6歳)', '小学生 (7-12歳)', '中学生 (13-15歳)', '高校生 (16-18歳)', '大学/専門 (19-22歳)', '20代 (若手社会人)', '30代 (中堅)', '40代以降', '全期間共通'];
 const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニケーション', '専門資格'];
@@ -223,6 +223,7 @@ const App = {
 
           Object.values(this.data.profiles).forEach(p => {
              if(!p.diary) p.diary = []; 
+             if(!p.plans) p.plans = [];
              if(p.isClaimed === undefined) p.isClaimed = false;
              
              // 核心修復：強制將舊有錯亂的標籤轉換為絕對關係角色
@@ -462,9 +463,20 @@ const App = {
         }
     }
     
-    if(!isNew) { const exist = p[ctx.category].find(i => i.id === id); if(exist && exist.photo) itemData.photo = exist.photo; }
-    if(isNew) p[ctx.category].push(itemData);
-    else { const idx = p[ctx.category].findIndex(i => i.id === id); if(idx !== -1) p[ctx.category][idx] = { ...p[ctx.category][idx], ...itemData }; }
+    // 陣列防呆機制 (確保不會因為缺少陣列而卡死)
+    if (!p[ctx.category]) p[ctx.category] = [];
+    
+    if(!isNew) { 
+        const exist = p[ctx.category].find(i => i.id === id); 
+        if(exist && exist.photo) itemData.photo = exist.photo; 
+    }
+    
+    if(isNew) {
+        p[ctx.category].push(itemData);
+    } else { 
+        const idx = p[ctx.category].findIndex(i => i.id === id); 
+        if(idx !== -1) p[ctx.category][idx] = { ...p[ctx.category][idx], ...itemData }; 
+    }
     
     this.saveData(); this.closeModal(); this.render();
   },
@@ -486,9 +498,10 @@ const App = {
     if(plan) {
       plan.status = 'completed'; 
       const newItem = { id: 'item_' + Date.now(), year: plan.year || new Date().getFullYear(), month: plan.month || (new Date().getMonth() + 1), title: plan.title, desc: `【目標達成】\n` + (plan.desc || ''), stage: plan.stage, photo: plan.photo };
+      if(!p[targetCategory]) p[targetCategory] = []; 
       if(targetCategory === 'history') newItem.eduStatus = '卒業';
       if(targetCategory === 'skills') newItem.dim = '専門資格'; 
-      if(!p[targetCategory]) p[targetCategory] = []; p[targetCategory].push(newItem);
+      p[targetCategory].push(newItem);
       this.saveData();
     }
     this.state.dialog = null; this.render();
@@ -713,7 +726,7 @@ const App = {
             });
         }
 
-        return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V17.3</h2>
+        return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V17.4</h2>
         ${loginBtns}
         <div style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
           <button class="btn btn-google btn-full" style="margin-bottom:10px;" onclick="window.CloudSync.login()"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" style="width:16px; margin-right:8px;"> Googleアカウントで連携・復元</button>
@@ -989,32 +1002,109 @@ const App = {
   buildDiaryUI(cat, title, isReadOnly) {
     const p = this.getProfile();
     const myRoleInProfile = (this.state.loginProfileId === p.id) ? 'subject' : 'parent';
-    const requests = (p[cat]||[]).filter(i => i.author === myRoleInProfile && i.visibility === 'requested');
+    const isOwnerView = myRoleInProfile === 'subject';
+    
+    // Only the subject can see the requests queue
+    const requests = isOwnerView ? (p[cat]||[]).filter(i => i.visibility === 'requested') : [];
     let reqHtml = '';
     if (requests.length > 0) {
         reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3>承認待ちリクエスト</h3>${requests.map(r => `<div class="list-item"><div>${r.date}: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('${cat}', '${r.id}')">公開する</button></div>`).join('')}</div>`;
     }
 
-    let html = `<div class="card" style="border-top:4px solid var(--diary-color);"><h3>${title} <button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button></h3>`;
+    // Only the subject can add new diaries
+    let html = `<div class="card" style="border-top:4px solid var(--diary-color);"><h3>${title} ${isOwnerView ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button>` : ''}</h3>`;
     
     const filtered = [...(p[cat] || [])].sort((a,b) => (b.date > a.date ? 1 : -1));
     if (filtered.length === 0) html += `<p style="text-align:center; font-size:13px; color:#999;">記録がありません</p>`;
 
     filtered.forEach(i => {
-      const isOwner = i.author === myRoleInProfile;
-      if (isOwner || i.visibility === 'visible') {
-          const canEdit = isOwner; 
-          const visibilityBtn = isOwner ? `<button class="btn ${i.visibility === 'visible' ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="event.stopPropagation(); App.toggleVisibility('${cat}','${i.id}')">${i.visibility === 'visible' ? '🔓 公開中' : '🔒 非公開'}</button>` : '';
-          const actionBtns = `<div style="display:flex; flex-direction:column; gap:5px; min-width:80px;">${visibilityBtn}${canEdit?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button>`:''}</div>`;
+      // Parent can view only if it's 'visible'
+      if (isOwnerView || i.visibility === 'visible') {
+          const canEdit = isOwnerView; // Only subject can edit or delete diaries
+          const visibilityBtn = isOwnerView ? `<button class="btn ${i.visibility === 'visible' ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="event.stopPropagation(); App.toggleVisibility('${cat}','${i.id}')">${i.visibility === 'visible' ? '🔓 公開中' : '🔒 非公開'}</button>` : '';
+          const actionBtns = canEdit ? `<div style="display:flex; flex-direction:column; gap:5px; min-width:80px;">${visibilityBtn}<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button></div>` : '';
 
           html += `<div class="list-item"><div class="item-content" ${canEdit ? `onclick="App.openModal('${cat}', '${i.id}')"` : ''}><div class="item-meta" style="color:var(--diary-color); font-weight:bold;">${i.date}</div><div class="item-title" style="font-weight:normal; font-size:14px; white-space:pre-wrap;">${i.title}</div></div><div class="photo-wrapper" style="position:relative; margin-right:10px;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')">${canEdit ? `<button class="btn btn-danger btn-sm" style="position:absolute; top:-8px; right:-8px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>`:''}` : (canEdit ? `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`:'')}</div>${actionBtns}</div>`;
       } else {
-          html += `<div class="list-item" style="align-items:center;"><div><span class="tag" style="background:#64748b;">${i.date}</span> 🔒 内容非公開</div> <button class="btn btn-primary btn-sm" onclick="App.requestAccess('${cat}', '${i.id}')">${i.visibility==='requested'?'要請中':'表示要請'}</button></div>`;
+          // Parent seeing a hidden diary
+          html += `<div class="list-item" style="align-items:center;"><div><span class="tag" style="background:#64748b;">${i.date}</span> 🔒 内容非公開</div> <button class="btn btn-primary btn-sm" onclick="App.requestAccess('${cat}', '${i.id}')">${i.visibility==='requested'?'要請中':'閲覧をリクエスト'}</button></div>`;
       }
     });
     html += `</div>`;
     return reqHtml + html;
-  }
+  },
+
+  templateModal() {
+    const ctx = this.state.modalContext; const p = this.getProfile(); const isNew = ctx.itemId === null;
+    const item = isNew ? {} : p[ctx.category].find(i => i.id === ctx.itemId);
+    
+    if (ctx.category === 'diary') {
+        const todayStr = this.getLocalTodayString();
+        return `<div class="modal-overlay overlay"><div class="modal-box"><h3>${isNew?'メモ・日記を追加':'編集'}</h3>
+        <label>日付</label><input type="date" id="mod-date" value="${item.date || todayStr}">
+        <label>公開設定</label><select id="mod-visibility" style="margin-bottom:12px;"><option value="hidden" ${item.visibility==='hidden'?'selected':''}>🔒 非公開 (自分のみ)</option><option value="visible" ${item.visibility==='visible'||isNew?'selected':''}>🔓 公開 (共有相手も閲覧可)</option></select>
+        <label>内容 (格言・一言など)</label><textarea id="mod-title" rows="4" placeholder="今日事今日畢">${item.title||''}</textarea>
+        <div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
+    }
+
+    const isEdu = ctx.category === 'history'; const isSkill = ctx.category === 'skills'; const isPlan = ctx.category === 'plans';
+    const stageOptions = STAGES.map(s => `<option value="${s}" ${item.stage===s?'selected':''}>${s}</option>`).join('');
+    const dimOptions = SKILL_DIMS.map(s => `<option value="${s}" ${item.dim===s?'selected':''}>${s}</option>`).join('');
+    
+    return `<div class="modal-overlay overlay"><div class="modal-box"><h3>${isNew?'新規追加':'編集'}</h3>
+    <label>ライフステージ</label><select id="mod-stage">${stageOptions}</select>
+    ${isEdu ? `<label>状態 (学歴用)</label><select id="mod-edu-status"><option value="入学" ${item.eduStatus==='入学'?'selected':''}>入学</option><option value="卒業" ${item.eduStatus==='卒業'?'selected':''}>卒業</option><option value="卒業見込み" ${item.eduStatus==='卒業見込み'?'selected':''}>卒業見込み</option><option value="中退" ${item.eduStatus==='中退'?'selected':''}>中退 (肄業)</option></select>` : ''}
+    ${isSkill ? `<label>能力カテゴリー (レーダーチャート用)</label><select id="mod-skill-dim">${dimOptions}</select>` : ''}
+    ${isPlan ? `<label>公開設定</label><select id="mod-visibility" style="margin-bottom:12px;"><option value="hidden" ${item.visibility==='hidden'?'selected':''}>🔒 非公開 (自分のみ)</option><option value="visible" ${item.visibility==='visible'||isNew?'selected':''}>🔓 公開 (共有相手も閲覧可)</option></select>` : ''}
+    <div class="grid-2"><div><label>年 (西暦)</label><input type="number" id="mod-year" value="${item.year||''}" placeholder="2026" max="2100"></div><div><label>月</label><input type="number" id="mod-month" value="${item.month||''}" placeholder="4" min="1" max="12"></div></div>
+    <label>内容 / タイトル</label><input type="text" id="mod-title" value="${item.title||''}" placeholder="入力してください"><label>詳細・備考</label><textarea id="mod-desc" rows="4">${item.desc||''}</textarea>
+    <div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
+  },
+
+  triggerPrintMode() {
+    const hr = parseInt(document.getElementById('export-commute-hr').value); const min = parseInt(document.getElementById('export-commute-min').value);
+    if(hr < 0 || hr > 23 || min < 0 || min > 59) { this.showAlert("通勤時間は正しい範囲で入力してください。"); return; }
+    this.getProfile().basic.commuteHour = hr; this.getProfile().basic.commuteMinute = min;
+    const getCheck = (id) => Array.from(document.getElementById(id)?.querySelectorAll('input:checked') || []).map(i => i.value);
+    this.state.printFilter = { history: getCheck('export-history-list'), skills: getCheck('export-skills-list') };
+    this.saveData(); this.state.view = 'preview'; this.render();
+    setTimeout(() => window.print(), 800);
+  },
+
+  templatePrintPreview() {
+    const p = this.getProfile(); const b = p.basic; const fIds = this.state.printFilter || { history:[], skills:[] };
+    const hFilter = fIds.history || p.history.map(i=>i.id); const sFilter = fIds.skills || p.skills.map(i=>i.id);
+    const hItems = p.history.filter(i => hFilter.includes(i.id)).sort((a,b)=>a.year-b.year);
+    const sItems = p.skills.filter(i => sFilter.includes(i.id)).sort((a,b)=>a.year-b.year);
+    const age = b.birthday ? Math.floor((Date.now() - new Date(b.birthday).getTime()) / 31557600000) : 0;
+    
+    const buildRows = (items, minRows) => {
+        let h = items.map(i => `<tr><td class="txt-center">${i.year||''}</td><td class="txt-center">${i.month||''}</td><td>${i.title} ${i.eduStatus?` ${i.eduStatus}`:''}</td></tr>`).join('');
+        for(let k=items.length; k<minRows; k++) h += `<tr><td>&nbsp;</td><td></td><td></td></tr>`; return h;
+    };
+
+    return `<div class="resume-preview-wrapper" style="background:#52525b; padding:20px 0; min-height:100vh;">
+      <div class="print-actions" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:10px;"><button class="btn btn-secondary" onclick="App.state.view='app'; App.render()">戻る</button><button class="btn btn-primary" onclick="window.print()">印刷実行</button></div>
+      <div id="jis-resume-page">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+          <div class="jis-section-title">履 歴 書</div><div style="font-size:10pt;">${new Date().toLocaleDateString()} 現在</div>
+        </div>
+        <table class="jis-table">
+          <tr><td colspan="4" class="border-dash" style="font-size:9pt;">ふりがな　${b.furigana}</td><td rowspan="4" class="txt-center" style="width:40mm; padding:0; border:1px solid black; vertical-align:middle;">${b.photo?`<img src="${b.photo}" style="width:100%; height:100%; object-fit:cover;">`:'<div style="color:#999; font-size:10pt;">写真を貼る位置<br>縦 36mm<br>横 24mm</div>'}</td></tr>
+          <tr><td colspan="4" style="font-size:20pt; font-weight:bold; height:18mm; vertical-align:bottom; padding-bottom:5px; white-space: pre-wrap;">氏 名　　${p.name||''}</td></tr>
+          <tr><td colspan="4">${b.birthday} 生 （満 ${age} 歳）　性別：${b.gender==='male'?'男':'女'}</td></tr>
+          <tr><td colspan="4" style="height:15mm; vertical-align:top;">現住所　〒 ${b.postalCode}<br>${b.address}</td></tr>
+          <tr><td colspan="5">電話番号：${b.phone}　　Email：${b.email}</td></tr>
+        </table>
+        <table class="jis-table"><tr><th style="width:15%">年</th><th style="width:5%">月</th><th>学歴・職歴（各別にまとめて書く）</th></tr>${buildRows(hItems, 12)}</table>
+        <table class="jis-table"><tr><th style="width:15%">年</th><th style="width:5%">月</th><th>免許・資格</th></tr>${buildRows(sItems, 6)}</table>
+        <table class="jis-table"><tr><td style="height:35mm; vertical-align:top;"><b>志望の動機、特技、好きな学科、アピールポイントなど</b><br><br>${b.motivation||''}</td></tr></table>
+        <table class="jis-table" style="margin-bottom:0;"><tr><td style="width:40%; height:15mm; vertical-align:top;">通勤時間<br><div style="text-align:center; margin-top:5px;">約 ${b.commuteHour||0} 時間 ${b.commuteMinute||0} 分</div></td><td style="width:30%; vertical-align:top;">扶養家族数（配偶者を除く）<br><div style="text-align:center; margin-top:5px;">${b.dependents||0} 人</div></td><td style="width:30%; vertical-align:top;">配偶者<br><div style="text-align:center; margin-top:5px;">${b.spouse==='yes'?'有':'無'}</div></td></tr></table>
+      </div></div>`;
+  },
+
+  deleteItemPhoto(cat, id) { this.showConfirm("写真を削除しますか？", () => { const i=this.getProfile()[cat].find(x=>x.id===id); if(i) i.photo=null; this.saveData(); this.render(); }); },
+  clearAllData() { this.showConfirm("【警告】すべてのデータを完全に消去します。元に戻せません。", () => { localStorage.removeItem(this.DB_KEY); location.reload(); }); }
 };
 window.onload = () => App.init();
 </script>
