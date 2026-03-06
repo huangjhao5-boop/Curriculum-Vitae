@@ -14,7 +14,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>人生履歴書 V19.1 (AI Cache & LV3 Animation)</title>
+  <title>人生履歴書 V19.7 (権限修正版)</title>
 
   <!-- Chart.js for Radar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -215,7 +215,7 @@ const manifestStr = JSON.stringify({
 document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="data:application/manifest+json;charset=utf-8,${encodeURIComponent(manifestStr)}">`);
 
 /**
- * 人生履歴書 核心エンジン (V19.1)
+ * 人生履歴書 核心エンジン (V19.7)
  */
 const STAGES = ['乳幼児期 (0-6歳)', '小学生 (7-12歳)', '中学生 (13-15歳)', '高校生 (16-18歳)', '大学/専門 (19-22歳)', '20代 (若手社会人)', '30代 (中堅)', '40代以降', '全期間共通'];
 const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニケーション', '専門資格'];
@@ -237,12 +237,13 @@ const App = {
     view: 'login', activeProfileId: 'parent_self', activeTab: 'overview',
     modalContext: null, dialog: null, isSyncing: false, printFilter: null,
     viewImageSrc: null, loginProfileId: '',
-    // AI Skill Tree 專屬狀態
+    
+    // V19.6 AI 專屬雙重快取系統：以 Profile ID 為第一層，模式為第二層
+    // 結構: { 'profile_id': { 'A': { data, report }, 'B': { data, report } } }
+    skillTreeCaches: {}, 
     skillTreeMode: 'B', 
     skillTreeTarget: '', 
-    skillTreeReport: '', 
-    skillTreeGenerating: false,
-    skillTreeData: null // 加入快取，避免重新渲染時消失
+    skillTreeGenerating: false
   },
 
   chartInstance: null,
@@ -302,6 +303,7 @@ const App = {
           Object.values(this.data.profiles).forEach(p => {
              if(!p.diary) p.diary = []; 
              if(!p.plans) p.plans = [];
+             if(!p.achievements) p.achievements = []; 
              if(p.isClaimed === undefined) p.isClaimed = false;
              
              if(!p.basic) p.basic = {};
@@ -309,6 +311,7 @@ const App = {
              if(p.basic.contactAddress === undefined) p.basic.contactAddress = '';
              if(p.basic.contactPhone === undefined) p.basic.contactPhone = '';
              if(p.basic.contactPostalCode === undefined) p.basic.contactPostalCode = '';
+             if(p.basic.motivation === undefined) p.basic.motivation = '';
              
              const fixAuthor = (author) => {
                  if (this.data.profiles[author]) return author; 
@@ -416,6 +419,16 @@ const App = {
         if (input.value !== pwd) { this.showAlert('パスワードが正しくありません。'); return; }
     }
     
+    // V19.4 登入時清空 AI 快取，確保帳號隔離
+    this.state.skillTreeData_A = null;
+    this.state.skillTreeReport_A = '';
+    this.state.skillTreeData_B = null;
+    this.state.skillTreeReport_B = '';
+    if (this.networkInstance) {
+        this.networkInstance.destroy();
+        this.networkInstance = null;
+    }
+
     this.state.activeProfileId = roleId;
     this.state.view = 'app';
     this.trackEvent('login_success', { role: roleId === this.data.settings.mainProfileId ? 'main' : 'child' });
@@ -462,7 +475,18 @@ const App = {
     });
   },
 
-  switchProfile(id) { if(this.data.profiles[id]) { this.state.activeProfileId = id; this.render(); } },
+  switchProfile(id) { 
+      if(this.data.profiles[id]) { 
+          // V19.6 在這裡我們「不」清空快取，因為我們用字典 (Dictionary) 隔離了每個人
+          // 當我們呼叫 render() 時，畫布會去拿目前對應 activeProfileId 的快取
+          if (this.networkInstance) {
+              this.networkInstance.destroy();
+              this.networkInstance = null;
+          }
+          this.state.activeProfileId = id; 
+          this.render(); 
+      } 
+  },
   
   updateBasic(field, value) { 
     if(field === 'birthday' && value) {
@@ -585,11 +609,29 @@ const App = {
     const p = this.getProfile(); const plan = p.plans.find(i => i.id === planId);
     if(plan) {
       plan.status = 'completed'; 
-      const newItem = { id: 'item_' + Date.now(), year: plan.year || new Date().getFullYear(), month: plan.month || (new Date().getMonth() + 1), title: plan.title, desc: `【目標達成】\n` + (plan.desc || ''), stage: plan.stage, photo: plan.photo };
+      // 移除前綴字，以利成就名稱與 AI 節點精準比對
+      const cleanTitle = plan.title.replace('[AI提案] ', '');
+      const newItem = { id: 'item_' + Date.now(), year: plan.year || new Date().getFullYear(), month: plan.month || (new Date().getMonth() + 1), title: cleanTitle, desc: `【目標達成】\n` + (plan.desc || ''), stage: plan.stage, photo: plan.photo };
+      
       if(!p[targetCategory]) p[targetCategory] = []; 
       if(targetCategory === 'history') newItem.eduStatus = '卒業';
       if(targetCategory === 'skills') newItem.dim = '専門資格'; 
       p[targetCategory].push(newItem);
+      
+      // V19.6 同步更新當前 Profile 的 AI 雙模式快取，強制變亮
+      const pId = this.state.activeProfileId;
+      if (this.state.skillTreeCaches[pId]) {
+          ['A', 'B'].forEach(mode => {
+              if (this.state.skillTreeCaches[pId][mode]) {
+                  this.state.skillTreeCaches[pId][mode].data.nodes.forEach(node => {
+                      if(node.group === 'pending' && (cleanTitle.toLowerCase().includes(node.label.toLowerCase()) || node.label.toLowerCase().includes(cleanTitle.toLowerCase()))) {
+                          node.group = 'acquired';
+                      }
+                  });
+              }
+          });
+      }
+
       this.saveData();
       this.trackEvent('complete_plan', { category_saved: targetCategory });
     }
@@ -597,7 +639,7 @@ const App = {
   },
 
   grantAccess(category, itemId) { const item = this.getProfile()[category].find(i => i.id === itemId); if(item) { item.visibility = 'visible'; this.saveData(); this.render(); } },
-  requestAccess(category, itemId) { const item = this.getProfile()[category].find(i => i.id === itemId); if(item) { item.visibility = 'requested'; this.saveData(); this.render(); this.showAlert('表示リクエストを送信しました。'); } },
+  requestAccess(category, itemId) { const item = this.getProfile()[category].find(i => i.id === itemId); if(item) { item.visibility = 'requested'; this.saveData(); this.render(); this.showAlert('閲覧リクエストを送信しました。'); } },
 
   /* === 遊客本機資料復原/匯出 === */
   exportLocalData() {
@@ -623,9 +665,9 @@ const App = {
     });
   },
 
-  /* === AI 技能樹系統 (導入快取與精準指令) === */
+  /* === AI 技能樹系統 === */
   getGeminiKey() { return localStorage.getItem('LIFE_RESUME_GEMINI_KEY') || ''; },
-  setGeminiKey(key) { localStorage.setItem('LIFE_RESUME_GEMINI_KEY', key.trim()); this.showAlert("API Key 保存成功！"); },
+  setGeminiKey(key) { localStorage.setItem('LIFE_RESUME_GEMINI_KEY', key.trim()); this.showAlert("API Key を保存しました！"); },
 
   getGeminiModel() { return localStorage.getItem('LIFE_RESUME_GEMINI_MODEL') || 'gemini-flash-latest'; },
   setGeminiModel(model) { localStorage.setItem('LIFE_RESUME_GEMINI_MODEL', model); this.render(); },
@@ -633,51 +675,89 @@ const App = {
   async generateSkillTree() {
       const rawKey = this.getGeminiKey();
       const apiKey = rawKey.trim();
-      if (!apiKey) { this.showAlert("請先在下方輸入您的 Google Gemini API Key。"); return; }
+      if (!apiKey) { this.showAlert("先に下の入力欄にGoogle Gemini API Keyを設定してください。"); return; }
       
       this.state.skillTreeGenerating = true; 
-      this.state.skillTreeData = null; // 生成前先清空快取
+      
+      const pId = this.state.activeProfileId;
+      const mode = this.state.skillTreeMode;
+      
+      // 生成前清空「當前 Profile + 當前模式」的快取
+      if(this.state.skillTreeCaches[pId] && this.state.skillTreeCaches[pId][mode]) {
+          this.state.skillTreeCaches[pId][mode] = null;
+      }
+      
+      if(this.networkInstance) { this.networkInstance.destroy(); this.networkInstance = null; }
       this.render();
 
       const p = this.getProfile();
+      const b = p.basic;
+
+      // 計算精確年齡
+      let ageStr = '未提供';
+      if (b.birthday) {
+          const bd = new Date(b.birthday);
+          const today = new Date();
+          let ageNum = today.getFullYear() - bd.getFullYear();
+          const m = today.getMonth() - bd.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) {
+              ageNum--;
+          }
+          ageStr = ageNum >= 0 ? ageNum + '歳' : '未誕生';
+      }
+      let genderStr = '未記載';
+      if (b.gender === 'male') genderStr = '男性';
+      if (b.gender === 'female') genderStr = '女性';
+
+      // 將所有基本資料組裝為文字供 AI 分析
+      let basicInfoStr = `年齢: ${ageStr}, 性別: ${genderStr}\n`;
+      basicInfoStr += `住所: 〒${b.postalCode||'未記入'} ${b.address||'未記入'}\n`;
+      basicInfoStr += `電話番号: ${b.phone||'未記入'}, Email: ${b.email||'未記入'}\n`;
+      basicInfoStr += `連絡先: 〒${b.contactPostalCode||'未記入'} ${b.contactAddress||'未記入'} (TEL: ${b.contactPhone||'未記入'})\n`;
+      basicInfoStr += `志望動機・アピールポイント: ${b.motivation||'未記入'}\n`;
+      basicInfoStr += `本人希望記入欄: ${b.desiredConditions||'未記入'}`;
+
+      // 所有的上下文
       const context = JSON.stringify({ 
           name: p.name, 
-          history: p.history, 
-          skills: p.skills, 
-          expectations: p.plans.filter(i=>i.author!==this.state.loginProfileId) 
+          basicInfo: basicInfoStr,
+          history: p.history.map(i=>`${i.year}年: ${i.title} (${i.eduStatus||''})`), 
+          skills: p.skills.map(i=>`${i.year}年: ${i.title}`), 
+          achievements: (p.achievements||[]).map(i=>`${i.year}年: ${i.title}`),
+          expectations: p.plans.filter(i=>i.author!==this.state.loginProfileId).map(i=>i.title) 
       });
       
-      // V19.1 最強 Prompt：強制具體化與限制廢話
-      const prompt = `你現在是一位資深的國際高階獵頭與職涯規劃專家。請根據以下使用者的「現有學經歷」、「已取得技能」以及「他人的期許」，為他繪製一份具備高度邏輯性的「動態技能樹 (Skill Tree)」，並提供專業的職涯建議報告。
+      // V19.6 最強 Prompt：加入地址與志望動機的全人分析
+      const prompt = `あなたは国際的なシニアヘッドハンター兼キャリアコンサルタントです。以下のユーザーの「提供された全データ（年齢、性別、居住地、志望動機、経歴など）」を総合的に分析し、JSON形式で「動的スキルツリー」を生成してください。
 
-【特別要求：絕對具體與可執行性】
-1. 所有 "pending" (琥珀色) 的待修煉技能，【絕對禁止】使用空泛或曖昧的形容詞（例如：禁止寫「高價值專業技能」、「硬核技術」、「跨領域溝通」、「領導力」等無具體指標的詞彙）。
-2. 必須給予【明確、可立刻執行的專有名詞、工具名稱或證照名稱】。例如：請寫「考取 TOEIC 850分」、「取得 AWS SAA 雲端架構師證照」、「學習 Python 資料分析 (Pandas)」、「累積 5 人團隊敏捷開發 (Scrum) 管理經驗」。讓使用者能明確知道「要去做什麼」。
+【厳格なルール：捏造の絶対禁止とパーソナライズ（非常に重要）】
+1. "acquired"（緑色・習得済み）ノードは、ユーザーの提供データに【明確に記載されている内容のみ】を使用してください。目標から逆算してスキルを推測で習得済みとすることは【絶対に禁止】です。
+2. "pending"（琥珀色・未習得）ノードは、「高価値な専門スキル」のような曖昧な言葉を【絶対に禁止】します。「AWS SAA資格の取得」「Python (Pandas)の習得」「TOEIC 850点以上」など、完全に具体的で実行可能な行動目標のみを出力してください。
+3. 【年齢・性別・居住地の厳格な考慮】：ユーザーの年齢（${ageStr}）、性別（${genderStr}）、および居住地等の背景を【必ず】考慮して、安全かつ現実的なロードマップを設計してください。
+   - 例：小学生が「東大合格」を目指す場合、直接的な大学受験勉強ではなく「学習習慣の確立」や「算数検定の合格」など、年齢相応の段階的な目標を提示してください。
+   - 例：高齢者や、年齢に対してハードな目標（例：ボディビルダー等）が設定された場合、生理的な限界や安全性を最優先し、無理のない現実的なステップ（例：基礎体力作り、健康的な食事管理）を提案してください。
+   - 居住地や連絡先の有無から、勤務形態（リモートや地元就職など）のリアリティも考慮に含めることができます。
 
-【使用者資料】
+【ユーザーデータ】
 ${context}
 
-【生成模式】
-${this.state.skillTreeMode === 'A' ? `目標逆推模式：使用者的最終夢想職業為「${this.state.skillTreeTarget}」。請規劃從現狀到該目標的最短且最明確的修煉路徑。` : `發散探索模式：請根據他的現有優勢與期許，為他推導出 2~3 個最具潛力的高階職業發展方向。`}
+【生成モード】
+${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最終目標は「${this.state.skillTreeTarget}」です。現状の全背景からこの目標を達成するための最短かつ年齢・状況に相応しい具体的なスキルパスを設計してください。` : `可能性探索モード：ユーザーの現状の強みや周囲の期待を元に、将来有望な高度なキャリアパス（最終目標）を2〜3つ提案してください。`}
 
-【JSON 輸出格式要求】（請絕對遵守，只輸出純 JSON，不包含 Markdown 標記）
+【JSON出力形式】（Markdownの装飾なし、純粋なJSON文字列のみ出力）
 {
   "nodes": [
-    { "id": 1, "label": "現有技能名稱", "group": "acquired", "title": "已具備的優勢與經歷" },
-    { "id": 2, "label": "TOEIC 850分 或 PMP證照", "group": "pending", "title": "具體的建議與行動方案" },
-    { "id": 3, "label": "最終職業目標", "group": "target", "title": "推薦的高階職位名稱" }
+    { "id": 1, "label": "取得済みスキルの名前", "group": "acquired", "title": "データに基づく強みの詳細" },
+    { "id": 2, "label": "具体的な未習得スキル/資格", "group": "pending", "title": "年齢・状況に合わせた具体的な行動プラン" },
+    { "id": 3, "label": "最終目標の職業/状態", "group": "target", "title": "推奨する高度な役職や状態" }
   ],
   "edges": [
     { "from": 1, "to": 2 }
   ],
-  "report": "【專業職涯分析與建議報告】\\n\\n1. 現狀優勢分析：(分析核心競爭力)\\n2. 具體技能缺口與行動：(明確指出下一步該去考什麼證照、學什麼工具)\\n3. 最終職業建議：(給出明確的職位建議)"
+  "report": "【プロフェッショナル・キャリア分析レポート】\\n\\n1. 現状の総合分析：(年齢・性別・居住地・志望動機などを含む全データに基づく強みと特性の分析)\\n2. 具体的なスキルギャップと行動計画：(pendingノードをどう習得すべきか、年齢に合わせたステップで明確に)\\n3. 最終的なキャリア提案：(安全・現実的かつ具体的な提案)"
 }
 
-【節點規則】
-- "acquired" (綠色)：已具備的學歷、工作經驗或技能。
-- "pending" (琥珀色)：通往目標還缺少的具體關鍵技能（請務必將「他人的期許」轉化為這類具體指標）。
-- "target" (藍色)：最終的職業目標。
-- 節點總數請保持在 8 到 15 個之間，並確保 edges 邏輯連貫。`;
+ノード数は8〜15個程度にし、論理的にedgesで繋いでください。`;
 
       try {
           const modelName = this.getGeminiModel();
@@ -696,37 +776,53 @@ ${this.state.skillTreeMode === 'A' ? `目標逆推模式：使用者的最終夢
               throw new Error(`API 錯誤: ${errDetail}`);
           }
           if (!result.candidates || result.candidates.length === 0) {
-              throw new Error("API 沒有回傳任何內容，請稍後再試。");
+              throw new Error("API はコンテンツを返しませんでした。後でもう一度お試しください。");
           }
 
           let text = result.candidates[0].content.parts[0].text;
           const treeData = JSON.parse(text);
           
-          // 將成功生成的資料寫入快取 (Cache)
-          this.state.skillTreeReport = treeData.report;
-          this.state.skillTreeData = { nodes: treeData.nodes, edges: treeData.edges };
+          // 將結果寫入專屬 Profile 的字典快取中
+          if (!this.state.skillTreeCaches[pId]) this.state.skillTreeCaches[pId] = {};
+          this.state.skillTreeCaches[pId][mode] = { 
+              data: { nodes: treeData.nodes, edges: treeData.edges }, 
+              report: treeData.report 
+          };
           this.state.skillTreeGenerating = false;
           
-          // 重新渲染畫面，畫面加載時會自動利用 Cache 呼叫 drawSkillTree
           this.render();
           
       } catch(e) { 
           console.error("Skill Tree Generation Error:", e);
           this.state.skillTreeGenerating = false; 
           this.render(); 
-          this.showAlert("生成失敗，原因：\n" + e.message + "\n\n(提示：如果顯示 not found，請嘗試在下方切換其他 AI 模型)"); 
+          this.showAlert("生成失敗，原因：\n" + e.message + "\n\n(ヒント：not foundと表示された場合は、下のAIモデルを変更してみてください)"); 
       }
   },
 
   drawSkillTree(nodesData, edgesData) {
       const container = document.getElementById('skill-network-container');
       if (!container || typeof vis === 'undefined') return;
+      
+      const p = this.getProfile();
+      
+      const acquiredNames = [
+          ...p.history.map(i => i.title),
+          ...p.skills.map(i => i.title),
+          ...(p.achievements || []).map(i => i.title)
+      ].join(' ').toLowerCase(); 
 
       const nodes = new vis.DataSet(nodesData.map(n => {
           let color, shape = 'box', fontColor = '#ffffff';
-          if(n.group === 'acquired') { color = { background: '#10b981', border: '#059669' }; }
-          else if(n.group === 'pending') { color = { background: '#f59e0b', border: '#d97706' }; }
-          else if(n.group === 'target') { shape = 'star'; color = { background: '#3b82f6', border: '#2563eb' }; fontColor = '#1e40af'; }
+          
+          let currentGroup = n.group;
+          if (currentGroup === 'pending' && acquiredNames.includes(n.label.toLowerCase())) {
+              currentGroup = 'acquired';
+          }
+
+          if(currentGroup === 'acquired') { color = { background: '#10b981', border: '#059669' }; }
+          else if(currentGroup === 'pending') { color = { background: '#f59e0b', border: '#d97706' }; }
+          else if(currentGroup === 'target') { shape = 'star'; color = { background: '#3b82f6', border: '#2563eb' }; fontColor = '#1e40af'; }
           
           return { ...n, color: color, shape: shape, font: { color: fontColor, size: 14, bold: true }, shadow: true };
       }));
@@ -741,21 +837,20 @@ ${this.state.skillTreeMode === 'A' ? `目標逆推模式：使用者的最終夢
 
       const data = { nodes: nodes, edges: edges };
       
-      // LV3 物理彈性動畫核心設定
       const options = {
           physics: {
               enabled: true,
               solver: 'barnesHut',
               barnesHut: { 
-                  gravitationalConstant: -2500, // 節點互斥力
-                  centralGravity: 0.1,         // 中心引力
-                  springLength: 120,           // 彈簧長度
-                  springConstant: 0.04,        // 彈簧硬度
-                  damping: 0.09                // 阻尼 (越小越 Q 彈)
+                  gravitationalConstant: -2500, 
+                  centralGravity: 0.1,         
+                  springLength: 120,           
+                  springConstant: 0.04,        
+                  damping: 0.09                
               },
-              stabilization: false // 關鍵：關閉初始穩定化，讓畫面加載時呈現彈跳生長效果
+              stabilization: false 
           },
-          layout: { randomSeed: 42 }, // 固定隨機種子，讓樹的形狀保持一致
+          layout: { randomSeed: 42 }, 
           interaction: { hover: true, tooltipDelay: 200 }
       };
 
@@ -767,75 +862,23 @@ ${this.state.skillTreeMode === 'A' ? `目標逆推模式：使用者的最終夢
       this.networkInstance.on("selectNode", (params) => {
           const nodeId = params.nodes[0];
           const node = nodes.get(nodeId);
-          if (node.group === 'pending') {
-              App.showConfirm(`💡 發現待修煉技能：【${node.label}】\n\nAI 建議：${node.title}\n\n要將此任務加入您的「目標・プラン」列表嗎？`, () => {
+          if (node && node.color.background === '#f59e0b') {
+              App.showConfirm(`💡 未習得スキルを発見：【${node.label}】\n\nAIのアドバイス：${node.title}\n\nこのタスクを「目標・プラン」リストに追加しますか？`, () => {
                   const p = App.getProfile();
                   if(!p.plans) p.plans = [];
                   p.plans.push({
                       id: 'item_' + Date.now(),
                       year: new Date().getFullYear(), month: new Date().getMonth() + 1,
-                      title: `[AI建議] ${node.label}`, desc: node.title,
+                      title: `[AI提案] ${node.label}`,
+                      desc: node.title,
                       stage: '全期間共通', status: 'active', author: App.state.loginProfileId, visibility: 'visible'
                   });
                   App.saveData();
-                  App.showAlert("✅ 已成功加入您的目標列表！");
-                  // 提示後關閉視窗，會觸發 App.render()，利用 Cache 重新畫樹，不會浪費 API
+                  App.showAlert("✅ 目標リストに追加しました！この目標を達成すると、スキルツリーのノードが自動的に緑色に変わります。");
+                  App.render();
               });
           }
       });
-  },
-
-  /* === 核心渲染邏輯 === */
-  render() {
-    const root = document.getElementById('app-root');
-    let html = (this.state.view === 'login') ? this.templateLogin() : (this.state.view === 'preview' ? this.templatePrintPreview() : this.templateApp());
-    if (this.state.modalContext && this.state.view === 'app') html += this.templateModal();
-    if (this.state.dialog) html += this.templateDialog();
-    if (this.state.viewImageSrc) html += this.templateImageViewer(); 
-    root.innerHTML = html;
-    this.updateHeaderSyncUI();
-
-    // 畫面更新完畢後，執行特定 Tab 的繪圖邏輯
-    if (this.state.view === 'app') {
-        if (this.state.activeTab === 'overview') {
-            setTimeout(() => this.drawRadarChart(), 100);
-        }
-        // 若切換到技能樹分頁且有快取資料，自動重繪 (不消耗 API 額度)
-        if (this.state.activeTab === 'skilltree' && this.state.skillTreeData && !this.state.skillTreeGenerating) {
-            setTimeout(() => this.drawSkillTree(this.state.skillTreeData.nodes, this.state.skillTreeData.edges), 100);
-        }
-    }
-  },
-
-  updateHeaderSyncUI() {
-    const ind = document.getElementById('sync-indicator');
-    if(!ind) return;
-    if(window.CloudSync?.isLoggedIn) { ind.innerHTML = `<div class="sync-dot ${this.state.isSyncing?'syncing':'online'}"></div> <span style="color:#64748b;">${this.state.isSyncing?'同期中':'同期済'}</span>`; } 
-    else { ind.innerHTML = `<span style="color:#94a3b8;">未ログイン (ローカル)</span>`; }
-  },
-
-  templateImageViewer() {
-    return `<div class="image-viewer-overlay" onclick="App.closeImageViewer()">
-        <img src="${this.state.viewImageSrc}" class="image-viewer-img" onclick="event.stopPropagation()">
-        <button class="btn btn-secondary" style="position:absolute; top:20px; right:20px; border-radius:50%; width:40px; height:40px; font-size:24px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="App.closeImageViewer()">×</button>
-    </div>`;
-  },
-
-  templateDialog() {
-    const d = this.state.dialog; 
-    let inputHtml = '', btns = '';
-    if (d.type === 'prompt') {
-        inputHtml = `<input type="text" id="dialog-input" style="width:100%; margin-top:15px;">`;
-        btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button><button class="btn btn-primary btn-full" onclick="const v=document.getElementById('dialog-input'); App.state.dialog.onConfirm(v?v.value:null)">確定</button></div>`;
-    } else if (d.type === 'alert') {
-        btns = `<button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm ? App.state.dialog.onConfirm() : (App.state.dialog=null, App.render())">確認</button>`;
-    } else if (d.type === 'confirm') {
-        btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog.onCancel()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm()">確定</button></div>`;
-    } else if (d.type === 'complete_plan') {
-        inputHtml = `<select id="complete-cat-select" style="width:100%; margin-top:15px; padding:12px; border-radius:8px;"><option value="history">学歴・職歴</option><option value="skills">免許・資格</option><option value="achievements">表彰・出来事</option></select>`;
-        btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button><button class="btn btn-success btn-full" onclick="App.confirmCompletePlan('${d.planId}', document.getElementById('complete-cat-select').value)">実績に追加</button></div>`;
-    }
-    return `<div class="custom-dialog-overlay"><div class="custom-dialog-box"><h3 style="white-space:pre-wrap; margin-top:0;">${d.message}</h3>${inputHtml}<div style="margin-top:20px;">${btns}</div></div></div>`;
   },
 
   drawRadarChart() {
@@ -873,6 +916,67 @@ ${this.state.skillTreeMode === 'A' ? `目標逆推模式：使用者的最終夢
     });
   },
 
+  /* === 核心渲染邏輯 === */
+  render() {
+    const root = document.getElementById('app-root');
+    let html = (this.state.view === 'login') ? this.templateLogin() : (this.state.view === 'preview' ? this.templatePrintPreview() : this.templateApp());
+    if (this.state.modalContext && this.state.view === 'app') html += this.templateModal();
+    if (this.state.dialog) html += this.templateDialog();
+    if (this.state.viewImageSrc) html += this.templateImageViewer(); 
+    root.innerHTML = html;
+    this.updateHeaderSyncUI();
+
+    if (this.state.view === 'app') {
+        if (this.state.activeTab === 'overview') {
+            setTimeout(() => App.drawRadarChart(), 100);
+        }
+        
+        if (this.state.activeTab === 'skilltree') {
+            const pId = this.state.activeProfileId;
+            const mode = this.state.skillTreeMode;
+            const cache = this.state.skillTreeCaches[pId]?.[mode];
+            
+            if (cache && cache.data && !this.state.skillTreeGenerating) {
+                setTimeout(() => App.drawSkillTree(cache.data.nodes, cache.data.edges), 100);
+            } else if (this.networkInstance) {
+                this.networkInstance.destroy();
+                this.networkInstance = null;
+            }
+        }
+    }
+  },
+
+  updateHeaderSyncUI() {
+    const ind = document.getElementById('sync-indicator');
+    if(!ind) return;
+    if(window.CloudSync?.isLoggedIn) { ind.innerHTML = `<div class="sync-dot ${this.state.isSyncing?'syncing':'online'}"></div> <span style="color:#64748b;">${this.state.isSyncing?'同期中':'同期済'}</span>`; } 
+    else { ind.innerHTML = `<span style="color:#94a3b8;">未ログイン (ローカル)</span>`; }
+  },
+
+  templateImageViewer() {
+    return `<div class="image-viewer-overlay" onclick="App.closeImageViewer()">
+        <img src="${this.state.viewImageSrc}" class="image-viewer-img" onclick="event.stopPropagation()">
+        <button class="btn btn-secondary" style="position:absolute; top:20px; right:20px; border-radius:50%; width:40px; height:40px; font-size:24px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="App.closeImageViewer()">×</button>
+    </div>`;
+  },
+
+  templateDialog() {
+    const d = this.state.dialog; 
+    let inputHtml = '', btns = '';
+    if (d.type === 'prompt') {
+        inputHtml = `<input type="text" id="dialog-input" style="width:100%; margin-top:15px;">`;
+        btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button><button class="btn btn-primary btn-full" onclick="const v=document.getElementById('dialog-input'); App.state.dialog.onConfirm(v?v.value:null)">確定</button></div>`;
+    } else if (d.type === 'alert') {
+        btns = `<button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm ? App.state.dialog.onConfirm() : (App.state.dialog=null, App.render())">確認</button>`;
+    } else if (d.type === 'confirm') {
+        btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog.onCancel()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm()">確定</button></div>`;
+    } else if (d.type === 'complete_plan') {
+        inputHtml = `<select id="complete-cat-select" style="width:100%; margin-top:15px; padding:12px; border-radius:8px;"><option value="history">学歴・職歴</option><option value="skills">免許・資格</option><option value="achievements">表彰・出来事</option></select>`;
+        btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button><button class="btn btn-success btn-full" onclick="App.confirmCompletePlan('${d.planId}', document.getElementById('complete-cat-select').value)">実績に追加</button></div>`;
+    }
+    return `<div class="custom-dialog-overlay"><div class="custom-dialog-box"><h3 style="white-space:pre-wrap; margin-top:0;">${d.message}</h3>${inputHtml}<div style="margin-top:20px;">${btns}</div></div></div>`;
+  },
+
   templateLogin() {
     const mainId = this.data.settings.mainProfileId || 'parent_self';
     const mainProf = this.data.profiles[mainId];
@@ -881,16 +985,16 @@ ${this.state.skillTreeMode === 'A' ? `目標逆推模式：使用者的最終夢
     if (!this.state.loginProfileId) {
         let loginBtns = '';
         if (mainProf) {
-            loginBtns += `<button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.state.loginProfileId='${mainId}'; App.render()">${mainProf.name} (メイン) ログイン</button>`;
+            loginBtns += `<button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.state.loginProfileId='${mainId}'; App.executeLogin()">${mainProf.name} (メイン) ログイン</button>`;
         }
         otherIds.forEach(id => {
             const prof = this.data.profiles[id];
             if (!prof.isClaimed) {
-                loginBtns += `<button class="btn btn-secondary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.state.loginProfileId='${id}'; App.render()">${prof.name} (お子様) ログイン</button>`;
+                loginBtns += `<button class="btn btn-secondary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.state.loginProfileId='${id}'; App.executeLogin()">${prof.name} (お子様) ログイン</button>`;
             }
         });
 
-        return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V19.1</h2>
+        return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V19.7</h2>
         ${loginBtns}
         <div style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
           <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px; margin-top:15px;">オフライン・データ移行</p>
@@ -956,7 +1060,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆推模式：使用者的最終夢
         </div>
         <div style="background:#e2e8f0; height:10px; border-radius:10px; margin-top:12px; overflow:hidden;"><div style="height:100%; background:var(--primary); width:${lifePct}%;"></div></div>
       </div>
-      <div class="tabs-wrapper">${['overview:📊 分析・対比', 'basic:基本情報(JIS)', 'history:学歴・職歴', 'skills:免許・資格', 'achievements:表彰・出来事', 'diary:📝 メモ・日記', 'plans:🎯 目標管理', 'skilltree:🌳 AI 技能樹', 'settings:設定・共有'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.changeTab('${k}')">${v}</div>`; }).join('')}</div>
+      <div class="tabs-wrapper">${['overview:📊 分析・対比', 'basic:基本情報(JIS)', 'history:学歴・職歴', 'skills:免許・資格', 'achievements:表彰・出来事', 'diary:📝 メモ・日記', 'plans:🎯 目標管理', 'skilltree:🌳 AI 動的スキルツリー', 'settings:設定・共有'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.changeTab('${k}')">${v}</div>`; }).join('')}</div>
       <div id="tab-content">${this.renderTabContent(p)}</div>
     </div>`;
   },
@@ -1045,7 +1149,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆推模式：使用者的最終夢
 
     if(tab === 'history') return topNotice + this.buildListUI('history', '学歴・職歴', isReadOnly);
     if(tab === 'skills') return topNotice + this.buildListUI('skills', '免許・資格', isReadOnly);
-    if(tab === 'achievements') return topNotice + this.buildListUI('achievements', '表彰・実績・出来事', isReadOnly);
+    if(tab === 'achievements') return topNotice + this.buildListUI('achievements', '表彰・出来事', isReadOnly);
     if(tab === 'diary') return topNotice + this.buildDiaryUI('diary', '📝 メモ・日記 (格言・一言メモ)', isReadOnly);
     
     if(tab === 'plans') {
@@ -1072,22 +1176,26 @@ ${this.state.skillTreeMode === 'A' ? `目標逆推模式：使用者的最終夢
             }).join('');
         };
 
+        // V19.7 修復 目標的編輯權限與 + 按鈕呈現
         let myTitle = ''; let otherTitle = '';
+        let showAddMy = false;
         if (p.id === myId) {
             myTitle = '🎯 自分の目標・プラン';
             otherTitle = '親・家族からの期待'; 
+            showAddMy = true; // 本人看本人，可以新增自身目標
         } else {
             myTitle = `🎯 私の期待 (${p.name}へ)`; 
             otherTitle = `${p.name}自身の目標`; 
+            showAddMy = !isReadOnly; // 家長看小孩，可以新增對小孩的期待 (如果沒有被鎖定的話)
         }
         
         return topNotice + reqHtml + `<div class="grid-2">
             <div class="card" style="border-top:4px solid var(--plan-my);">
-                <h3>${myTitle} <button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button></h3>
+                <h3>${myTitle} ${showAddMy ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button>` : ''}</h3>
                 ${renderP(true)}
             </div>
             <div class="card" style="border-top:4px solid var(--plan-parent);">
-                <h3>${otherTitle} ${!isReadOnly ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button>` : ''}</h3>
+                <h3>${otherTitle}</h3>
                 ${renderP(false)}
             </div>
         </div>`;
@@ -1095,39 +1203,45 @@ ${this.state.skillTreeMode === 'A' ? `目標逆推模式：使用者的最終夢
 
     if (tab === 'skilltree') {
         const isA = this.state.skillTreeMode === 'A';
+        const pId = this.state.activeProfileId;
+        const cache = this.state.skillTreeCaches[pId]?.[this.state.skillTreeMode];
+        const currentReport = cache ? cache.report : '';
+
         return `<div class="card" style="border-top: 4px solid #8b5cf6;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="margin:0;">🌳 AI 動態技能樹 (LV3 物理視覺)</h3>
+                <h3 style="margin:0;">🌳 AI 動的スキルツリー</h3>
                 <span class="badge-success">Beta</span>
             </div>
-            <p style="font-size:13px; color:var(--text-sub); line-height:1.5;">AI 會分析您的履歷與期許，繪製專屬技能路線。<br>💡 <b>提示：</b>點擊「琥珀色」的節點，可直接加入您的目標列表！</p>
+            <p style="font-size:13px; color:var(--text-sub); line-height:1.5;">AIが${p.name}さんの全てのデータ（年齢、性別、経歴、目標）を統合分析し、専用のスキルパスを描画します。<br>💡 <b>ヒント：</b>「琥珀色」のノードをクリックすると、目標リストに直接追加できます！</p>
             
             <div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;">
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <button class="btn ${!isA?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='B'; App.render()">🔍 發散探索</button>
-                    <button class="btn ${isA?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='A'; App.render()">🎯 目標逆推</button>
+                    <button class="btn ${!isA?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='B'; App.render()">🔍 探索モード (AI提案)</button>
+                    <button class="btn ${isA?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='A'; App.render()">🎯 逆算モード (目標指定)</button>
                 </div>
-                ${isA ? `<input type="text" placeholder="請輸入夢想職業 (如: 軟體技術總監)" value="${this.state.skillTreeTarget}" onchange="App.state.skillTreeTarget=this.value" style="margin-bottom:0;">` : '<div style="font-size:12px; color:#64748b; text-align:center; padding:10px;">💡 提示：AI 將根據您過去的經歷與目標，為您發散出未來的職涯發展路徑。</div>'}
+                ${isA ? `<input type="text" placeholder="目標の職業を入力 (例: ITマネージャー、プロモデル)" value="${this.state.skillTreeTarget}" onchange="App.state.skillTreeTarget=this.value; if(App.state.skillTreeCaches['${pId}']) App.state.skillTreeCaches['${pId}']['A']=null; App.render();" style="margin-bottom:0;">` : '<div style="font-size:12px; color:#64748b; text-align:center; padding:10px;">💡 ヒント：AIが現在のプロフィールや環境に基づいて、将来のキャリアパスの可能性を提案します。</div>'}
             </div>
 
             <button class="btn btn-primary btn-full" style="padding:12px; font-size:16px; margin-bottom:20px;" onclick="App.generateSkillTree()" ${this.state.skillTreeGenerating?'disabled':''}>
-                ${this.state.skillTreeGenerating?'AI 正在運算中...':'✨ 生成動態技能樹'}
+                ${this.state.skillTreeGenerating?'AIが全データを分析中...':'✨ スキルツリーを生成・更新'}
             </button>
 
-            <div id="skill-network-container" style="${this.state.skillTreeGenerating?'opacity:0.3;':''} height: 500px; background: #fff; border: 1px solid var(--border); border-radius: 8px;"></div>
+            <div id="skill-network-container" style="${this.state.skillTreeGenerating?'opacity:0.3;':''} height: 500px; background: #fff; border: 1px solid var(--border); border-radius: 8px;">
+                ${cache ? '' : '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#cbd5e1; font-size:14px;">上のボタンをクリックしてAIを起動してください</div>'}
+            </div>
 
-            ${this.state.skillTreeReport ? `
-            <div style="background:#fffbeb; font-size:13px; border:1px solid #fde68a; padding:15px; border-radius:8px; margin-top:15px;">
-                ${this.state.skillTreeReport}
+            ${currentReport ? `
+            <div style="background:#fffbeb; font-size:13px; border:1px solid #fde68a; padding:15px; border-radius:8px; margin-top:15px; white-space:pre-wrap;">
+                ${currentReport}
             </div>` : ''}
 
             <div style="margin-top:20px; font-size:11px; display:flex; flex-direction:column; gap:10px;">
-                <div>🔑 您的 API Key: <input type="password" value="${this.getGeminiKey()}" onchange="App.setGeminiKey(this.value)" style="width:200px; padding:4px;"></div>
-                <div>🤖 切換 AI 模型: 
+                <div>🔑 API Key (ローカル保存のみ): <input type="password" value="${this.getGeminiKey()}" onchange="App.setGeminiKey(this.value)" style="width:200px; padding:4px;"></div>
+                <div>🤖 AIモデルの切り替え: 
                     <select onchange="App.setGeminiModel(this.value)" style="width:200px; padding:4px;">
-                        <option value="gemini-flash-latest" ${this.getGeminiModel()==='gemini-flash-latest'?'selected':''}>gemini-flash-latest (官方推薦)</option>
-                        <option value="gemini-1.5-flash" ${this.getGeminiModel()==='gemini-1.5-flash'?'selected':''}>gemini-1.5-flash (穩定版)</option>
-                        <option value="gemini-1.5-pro" ${this.getGeminiModel()==='gemini-1.5-pro'?'selected':''}>gemini-1.5-pro (進階，推論更強)</option>
+                        <option value="gemini-flash-latest" ${this.getGeminiModel()==='gemini-flash-latest'?'selected':''}>gemini-flash-latest (推奨)</option>
+                        <option value="gemini-1.5-flash" ${this.getGeminiModel()==='gemini-1.5-flash'?'selected':''}>gemini-1.5-flash</option>
+                        <option value="gemini-1.5-pro" ${this.getGeminiModel()==='gemini-1.5-pro'?'selected':''}>gemini-1.5-pro</option>
                     </select>
                 </div>
             </div>
@@ -1422,8 +1536,8 @@ window.onload = () => App.init();
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-  import { getFirestore, doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
   const fbConfig = {
     "apiKey": "AIzaSyCU8FG-bGYIm5eX3RbEUNK8_UO3k1oXwyw",
@@ -1434,33 +1548,156 @@ window.onload = () => App.init();
     "appId": "1:556917387273:web:9e36b3f666d566e64288d8"
   };
 
-  const app = initializeApp(fbConfig); const auth = getAuth(app); const db = getFirestore(app);
+  const app = initializeApp(fbConfig); const auth = getAuth(app); const db = getFirestore(app); 
   const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
 
-  window.CloudSync = { 
-    isLoggedIn: false, isPulling: false,
-    backup: async (d) => {
-        if(!auth.currentUser) return {success:false};
-        try { await setDoc(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData'), { data: JSON.stringify(d), ts: serverTimestamp() }); return {success:true}; }
-        catch(e){ return {success:false, msg:e.message}; }
-    },
-    login: () => signInWithPopup(auth, provider).catch(e => alert(e.message))
-  };
+  window.CloudSync = { isLoggedIn: false, user: null, pauseSync: false, isPulling: false, isPushingMain: false, isPushingShared: null, unsubShared: {} };
 
   onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      window.CloudSync.isLoggedIn = true;
-      onSnapshot(doc(db, 'users', user.uid, 'life_resume', 'mainData'), (s) => {
-          if(s.exists() && !App.state.isSyncing) {
-              const cloud = JSON.parse(s.data().data);
-              window.CloudSync.isPulling = true;
-              App.data = cloud; App.render();
-              window.CloudSync.isPulling = false;
-          }
-      });
-      App.render();
+    if (user) { 
+      window.CloudSync.isLoggedIn = true; window.CloudSync.user = user; 
+      
+      if(App.isLocalDefault()) {
+          try {
+              const s = await getDoc(doc(db, 'users', user.uid, 'life_resume', 'mainData'));
+              if(s.exists()) {
+                  App.data = JSON.parse(s.data().data);
+                  localStorage.setItem(App.DB_KEY, JSON.stringify(App.data));
+              }
+          } catch(e) {}
+      }
+      
+      window.CloudSync.listenToMainData();
+      window.CloudSync.listenToSharedProfiles();
+
+      if(typeof App !== 'undefined' && App.render) App.render();
+    } else {
+      window.CloudSync.isLoggedIn = false; window.CloudSync.user = null;
+      if(window.CloudSync.unsubMain) window.CloudSync.unsubMain();
+      Object.keys(window.CloudSync.unsubShared).forEach(k => window.CloudSync.unsubShared[k]());
+      window.CloudSync.unsubShared = {};
+      
+      if(typeof App !== 'undefined' && App.render) App.render();
     }
   });
+
+  window.CloudSync.listenToMainData = () => {
+      if(window.CloudSync.unsubMain) return; 
+      window.CloudSync.unsubMain = onSnapshot(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData'), (s) => {
+          if (window.CloudSync.isPushingMain || window.CloudSync.pauseSync) return;
+          if(s.exists()) {
+              const cloudData = JSON.parse(s.data().data);
+              if (cloudData.settings.lastSync > (App.data.settings.lastSync || 0)) {
+                  window.CloudSync.isPulling = true;
+                  App.data = cloudData;
+                  localStorage.setItem(App.DB_KEY, JSON.stringify(App.data));
+                  App.render();
+                  window.CloudSync.isPulling = false;
+                  window.CloudSync.listenToSharedProfiles(); 
+              }
+          }
+      }, (err) => console.warn("Main sync error:", err));
+  };
+
+  window.CloudSync.listenToSharedProfiles = () => {
+      Object.values(App.data.profiles).forEach(p => {
+          if(p.shareCode && !window.CloudSync.unsubShared[p.shareCode]) {
+              window.CloudSync.unsubShared[p.shareCode] = onSnapshot(doc(db, 'shared_profiles', p.shareCode), (s) => {
+                  if (window.CloudSync.isPushingShared === p.shareCode) return; 
+                  if(s.exists()) {
+                      const remoteData = JSON.parse(s.data().data);
+                      const localP = App.data.profiles[p.id];
+                      if (!localP || remoteData._lastUpdate > (localP._lastUpdate || 0)) {
+                          window.CloudSync.isPulling = true;
+                          const localId = p.id;
+                          App.data.profiles[localId] = { ...remoteData, id: localId, role: localP.role }; 
+                          localStorage.setItem(App.DB_KEY, JSON.stringify(App.data));
+                          if (App.state.activeProfileId === localId) {
+                              App.render();
+                          }
+                          window.CloudSync.isPulling = false;
+                      }
+                  }
+              }, (err) => console.warn("Shared sync error:", err));
+          }
+      });
+  };
+
+  window.CloudSync.login = async () => {
+      try {
+          const result = await signInWithPopup(auth, provider);
+          await window.CloudSync.checkConflict(result.user);
+      } catch(e) {
+          if (e.code !== 'auth/popup-closed-by-user') alert(e.message);
+      }
+  };
+
+  window.CloudSync.checkConflict = async (user) => {
+      App.state.dialog = { type: 'loading', message: 'クラウドデータを確認中...' };
+      App.render();
+      try {
+          const s = await getDoc(doc(db, 'users', user.uid, 'life_resume', 'mainData'));
+          if (s.exists()) {
+              const cloudData = JSON.parse(s.data().data);
+              if (App.isLocalDefault()) {
+                  App.data = cloudData;
+                  localStorage.setItem(App.DB_KEY, JSON.stringify(cloudData));
+                  App.state.dialog = null;
+                  App.showAlert("クラウドからデータを自動復元しました。");
+              } else {
+                  window.CloudSync.pauseSync = true; 
+                  App.state.dialog = { type: 'sync_conflict', cloudData: cloudData, message: '⚠️ データの競合を検出しました\n\n現在の端末とクラウドの両方にデータが存在します。\nどちらのデータを優先しますか？' };
+                  App.render();
+              }
+          } else {
+              App.state.dialog = null;
+              App.showAlert("クラウド連携が完了しました。現在のデータをバックアップします。");
+              App.triggerBackgroundSync();
+          }
+      } catch(e) { App.state.dialog = null; App.showAlert("エラーが発生しました: " + e.message); }
+  };
+  
+  window.CloudSync.logout = () => {
+      signOut(auth).then(() => { App.showAlert("Googleアカウントの連携を解除しました。"); }).catch(e => alert(e.message));
+  };
+  
+  window.CloudSync.backup = async (d) => {
+    if(!auth.currentUser) return {success:false};
+    try { await setDoc(doc(db, 'users', auth.currentUser.uid, 'life_resume', 'mainData'), { data: JSON.stringify(d), ts: serverTimestamp() }); return {success:true}; }
+    catch(e){ return {success:false, msg:e.message}; }
+  };
+
+  window.CloudSync.updateSharedProfile = async (profileData) => {
+      try {
+          await setDoc(doc(db, 'shared_profiles', profileData.shareCode), {
+              data: JSON.stringify(profileData),
+              ts: serverTimestamp()
+          }, { merge: true });
+      } catch(e) {}
+  };
+
+  window.CloudSync.createShareLink = async (profileData) => {
+      if(!auth.currentUser) return {success:false};
+      try {
+          const shareCode = profileData.shareCode;
+          await setDoc(doc(db, 'shared_profiles', shareCode), {
+              ownerUid: auth.currentUser.uid,
+              data: JSON.stringify(profileData),
+              ts: serverTimestamp()
+          });
+          return { success: true, code: shareCode };
+      } catch(e) { return { success: false, msg: e.message }; }
+  };
+
+  window.CloudSync.fetchSharedProfile = async (code) => {
+      if(!auth.currentUser) return {success:false};
+      try {
+          const s = await getDoc(doc(db, 'shared_profiles', code.toUpperCase()));
+          if(s.exists()) { return { success: true, data: JSON.parse(s.data().data) }; }
+          return { success: false };
+      } catch(e) { return { success: false, msg: e.message }; }
+  };
 </script>
 </body>
 </html>
