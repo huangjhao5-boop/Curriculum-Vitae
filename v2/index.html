@@ -14,7 +14,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>人生履歴書 V17.8 (GA4 Analytics)</title>
+  	<title>人生履歴書 V2 (Version 2)</title>
 
   <!-- Chart.js for Radar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -210,7 +210,7 @@ const manifestStr = JSON.stringify({
 document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="data:application/manifest+json;charset=utf-8,${encodeURIComponent(manifestStr)}">`);
 
 /**
- * 人生履歴書 核心エンジン (V17.8) GA4 Analytics Added
+ * 人生履歴書 核心エンジン (V2) GA4 Analytics Added
  */
 const STAGES = ['乳幼児期 (0-6歳)', '小学生 (7-12歳)', '中学生 (13-15歳)', '高校生 (16-18歳)', '大学/専門 (19-22歳)', '20代 (若手社会人)', '30代 (中堅)', '40代以降', '全期間共通'];
 const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニケーション', '専門資格'];
@@ -804,7 +804,7 @@ const App = {
             });
         }
 
-        return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V17.8</h2>
+        return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V2</h2>
         ${loginBtns}
         <div style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
           <button class="btn btn-google btn-full" style="margin-bottom:10px;" onclick="window.CloudSync.login()"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" style="width:16px; margin-right:8px;"> Googleアカウントで連携・復元</button>
