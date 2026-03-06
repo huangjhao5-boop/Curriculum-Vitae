@@ -14,10 +14,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  	<title>人生履歴書 V2 (Version 2)</title>
+  <title>人生履歴書 V18.0 (AI Skill Tree)</title>
 
   <!-- Chart.js for Radar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Vis-Network for Physics Skill Tree -->
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 
   <style>
 /* =========================================
@@ -187,6 +189,9 @@
       }
       @page { size: A4 portrait; margin: 0; }
     }
+
+    /* Skill Tree */
+    #skill-network-container { width: 100%; height: 500px; border: 1px solid var(--border); border-radius: 8px; background: #fff; margin-bottom:15px; }
   </style>
 </head>
 <body>
@@ -210,7 +215,7 @@ const manifestStr = JSON.stringify({
 document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="data:application/manifest+json;charset=utf-8,${encodeURIComponent(manifestStr)}">`);
 
 /**
- * 人生履歴書 核心エンジン (V2) GA4 Analytics Added
+ * 人生履歴書 核心エンジン (V18.0 AI Skill Tree Added)
  */
 const STAGES = ['乳幼児期 (0-6歳)', '小学生 (7-12歳)', '中学生 (13-15歳)', '高校生 (16-18歳)', '大学/専門 (19-22歳)', '20代 (若手社会人)', '30代 (中堅)', '40代以降', '全期間共通'];
 const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニケーション', '専門資格'];
@@ -231,10 +236,15 @@ const App = {
   state: {
     view: 'login', activeProfileId: 'parent_self', activeTab: 'overview',
     modalContext: null, dialog: null, isSyncing: false, printFilter: null,
-    viewImageSrc: null, loginProfileId: ''
+    viewImageSrc: null, loginProfileId: '',
+    skillTreeMode: 'B', 
+    skillTreeTarget: '',
+    skillTreeReport: '',
+    skillTreeGenerating: false
   },
 
   chartInstance: null,
+  networkInstance: null,
 
   init() {
     this.loadData();
@@ -243,7 +253,6 @@ const App = {
     this.render();
   },
 
-  // ========== GA4 數據追蹤封裝函數 ==========
   trackEvent(eventName, eventParams = {}) {
       try {
           if (typeof gtag === 'function') {
@@ -253,13 +262,11 @@ const App = {
       } catch(e) {}
   },
 
-  // 切換分頁時觸發追蹤
   changeTab(tabId) {
       this.state.activeTab = tabId;
       this.trackEvent('tab_view', { tab_name: tabId });
       this.render();
   },
-  // ==========================================
 
   getLocalTodayString() {
       const d = new Date();
@@ -616,6 +623,146 @@ const App = {
     });
   },
 
+  /* === API & 技能樹系統 (NEW in V18.0) === */
+  getGeminiKey() {
+      return localStorage.getItem('LIFE_RESUME_GEMINI_KEY') || '';
+  },
+  
+  setGeminiKey(key) {
+      localStorage.setItem('LIFE_RESUME_GEMINI_KEY', key.trim());
+      this.showAlert("API Key 保存成功！");
+  },
+  
+  async generateSkillTree() {
+      const apiKey = this.getGeminiKey();
+      if (!apiKey) {
+          this.showAlert("請先在下方輸入您的免費 Google Gemini API Key。");
+          return;
+      }
+
+      this.state.skillTreeGenerating = true;
+      this.state.skillTreeReport = '';
+      this.render();
+
+      const p = this.getProfile();
+      
+      let dataContext = `姓名: ${p.name}\n\n`;
+      dataContext += `[學歷與職歷]\n` + p.history.map(i => `- ${i.year}年: ${i.title} (${i.eduStatus||''})`).join('\n') + '\n\n';
+      dataContext += `[技能與資格]\n` + p.skills.map(i => `- ${i.year}年: ${i.title}`).join('\n') + '\n\n';
+      
+      const expectations = p.plans.filter(pl => pl.author !== this.state.loginProfileId && pl.status !== 'completed');
+      if(expectations.length > 0) {
+          dataContext += `[他人的期許/建議]\n` + expectations.map(i => `- ${i.title}: ${i.desc||''}`).join('\n') + '\n\n';
+      }
+
+      const mode = this.state.skillTreeMode;
+      const target = this.state.skillTreeTarget;
+      
+      const prompt = `你是一位專業的職涯規劃與技能分析 AI。請根據以下使用者的履歷資料，生成一份「動態技能樹」。
+      
+${dataContext}
+
+目前的模式為：${mode === 'A' ? `「目標導向逆推」，使用者的終極目標是【${target}】。請畫出從現有技能通往該目標的最短路徑。` : `「潛力發散探索」。請根據他現有的技能與他人的期許，推導出 2~3 個適合他的未來發展方向。`}
+
+請務必回傳嚴格的 JSON 格式 (不要有 Markdown code blocks，直接回傳 JSON 物件)。
+格式要求：
+{
+  "nodes": [
+    { "id": 1, "label": "技能/特質名稱", "group": "acquired", "title": "詳細說明" },
+    { "id": 2, "label": "待修煉技能", "group": "pending", "title": "為了達成目標需要的技能" },
+    { "id": 3, "label": "終極目標", "group": "target", "title": "職業目標" }
+  ],
+  "edges": [
+    { "from": 1, "to": 2 }
+  ],
+  "report": "請用繁體中文寫一段約 150 字的綜合分析報告，說明他的優勢在哪，以及琥珀色(待修煉)節點為何重要。"
+}
+
+規則：
+1. group 必須是 "acquired" (綠色, 已具備的經歷/技能), "pending" (琥珀色, 待修煉的軟硬實力/他人的期許), "target" (藍色星星, 最終職業目標)。
+2. 請展現「連點成線」的邏輯，edges 要合理串接。總節點數約 8 到 15 個。`;
+
+      try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  contents: [{ parts: [{ text: prompt }] }],
+                  generationConfig: { responseMimeType: "application/json" }
+              })
+          });
+
+          if (!response.ok) throw new Error("API 請求失敗，請檢查 Key 是否正確或有額度。");
+          
+          const result = await response.json();
+          let jsonText = result.candidates[0].content.parts[0].text;
+          
+          jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          const treeData = JSON.parse(jsonText);
+          
+          this.state.skillTreeReport = treeData.report;
+          this.state.skillTreeGenerating = false;
+          this.render();
+          
+          setTimeout(() => { this.drawSkillTree(treeData.nodes, treeData.edges); }, 100);
+
+      } catch (err) {
+          this.state.skillTreeGenerating = false;
+          this.render();
+          this.showAlert("AI 生成失敗：" + err.message);
+      }
+  },
+
+  drawSkillTree(nodesData, edgesData) {
+      const container = document.getElementById('skill-network-container');
+      if (!container || typeof vis === 'undefined') return;
+
+      const nodes = new vis.DataSet(nodesData.map(n => {
+          let color, shape = 'box', fontColor = '#ffffff';
+          if(n.group === 'acquired') { color = { background: '#10b981', border: '#059669' }; }
+          else if(n.group === 'pending') { color = { background: '#f59e0b', border: '#d97706' }; }
+          else if(n.group === 'target') { shape = 'star'; color = { background: '#3b82f6', border: '#2563eb' }; fontColor = '#1e40af'; }
+          
+          return { ...n, color: color, shape: shape, font: { color: fontColor, size: 14, bold: true }, shadow: true };
+      }));
+
+      const edges = new vis.DataSet(edgesData.map(e => ({
+          ...e, width: 2, color: { color: '#cbd5e1', highlight: '#8b5cf6' }, arrows: 'to', smooth: { type: 'cubicBezier', forceDirection: 'vertical' }
+      })));
+
+      const data = { nodes: nodes, edges: edges };
+      const options = {
+          physics: {
+              solver: 'barnesHut',
+              barnesHut: { gravitationalConstant: -2000, centralGravity: 0.3, springLength: 95, springConstant: 0.04 },
+              stabilization: { iterations: 150 }
+          },
+          interaction: { hover: true, tooltipDelay: 200 }
+      };
+
+      if (this.networkInstance) this.networkInstance.destroy();
+      this.networkInstance = new vis.Network(container, data, options);
+
+      this.networkInstance.on("selectNode", (params) => {
+          const nodeId = params.nodes[0];
+          const node = nodes.get(nodeId);
+          if (node.group === 'pending') {
+              App.showConfirm(`💡 發現待修煉技能：【${node.label}】\n\nAI 建議：${node.title}\n\n要將此任務加入您的「目標・プラン」列表嗎？`, () => {
+                  const p = App.getProfile();
+                  if(!p.plans) p.plans = [];
+                  p.plans.push({
+                      id: 'item_' + Date.now(),
+                      year: new Date().getFullYear(), month: new Date().getMonth() + 1,
+                      title: `[AI建議] ${node.label}`, desc: node.title,
+                      stage: '全期間共通', status: 'active', author: App.state.loginProfileId, visibility: 'visible'
+                  });
+                  App.saveData();
+                  App.showAlert("✅ 已成功加入您的目標列表！");
+              });
+          }
+      });
+  },
+
   async generateShareCode() {
     if(!window.CloudSync?.isLoggedIn) { this.showAlert('共有機能を使用するには、まずGoogleアカウントを連携してください。'); return; }
     const pId = document.getElementById('share-profile-select').value;
@@ -804,7 +951,7 @@ const App = {
             });
         }
 
-        return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V2</h2>
+        return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V18.0</h2>
         ${loginBtns}
         <div style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
           <button class="btn btn-google btn-full" style="margin-bottom:10px;" onclick="window.CloudSync.login()"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" style="width:16px; margin-right:8px;"> Googleアカウントで連携・復元</button>
@@ -871,7 +1018,7 @@ const App = {
         </div>
         <div style="background:#e2e8f0; height:10px; border-radius:10px; margin-top:12px; overflow:hidden;"><div style="height:100%; background:var(--primary); width:${lifePct}%;"></div></div>
       </div>
-      <div class="tabs-wrapper">${['overview:📊 分析・対比', 'basic:基本情報(JIS)', 'history:学歴・職歴', 'skills:免許・資格', 'achievements:表彰・出来事', 'diary:📝 メモ・日記', 'plans:🎯 目標管理', 'settings:設定・共有'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.changeTab('${k}')">${v}</div>`; }).join('')}</div>
+      <div class="tabs-wrapper">${['overview:📊 分析・対比', 'basic:基本情報(JIS)', 'history:学歴・職歴', 'skills:免許・資格', 'achievements:表彰・出来事', 'diary:📝 メモ・日記', 'plans:🎯 目標管理', 'skilltree:🌳 AI 技能樹', 'settings:設定・共有'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.changeTab('${k}')">${v}</div>`; }).join('')}</div>
       <div id="tab-content">${this.renderTabContent(p)}</div>
     </div>`;
   },
@@ -879,10 +1026,51 @@ const App = {
   renderTabContent(p) {
     const tab = this.state.activeTab; const b = p.basic;
     const myId = this.state.loginProfileId;
-    
     const isReadOnly = p.id !== myId && p.isClaimed === true;
-    
     let topNotice = isReadOnly ? `<div style="background:#e0f2fe; color:#0369a1; padding:10px; border-radius:8px; margin-bottom:15px; font-size:12px; border:1px solid #bae6fd;">ℹ️ このプロフィールは本人が引き継ぎ済みのため、閲覧および「期待」の追加のみ可能です。</div>` : '';
+
+    if(tab === 'skilltree') {
+        const isModeA = this.state.skillTreeMode === 'A';
+        return `
+        <div class="card" style="border-top: 4px solid #8b5cf6;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0;">🌳 AI 動態技能樹 (Physics-based)</h3>
+                <span class="badge-success">Beta 測試中</span>
+            </div>
+            <p style="font-size:13px; color:var(--text-sub); line-height:1.5;">Gemini AI 會分析您的履歷與期許，為您繪製專屬技能路線。<br>💡 <b>提示：</b>點擊「琥珀色」的節點，可直接將其加入您的目標列表！</p>
+            
+            <div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;">
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button class="btn ${!isModeA ? 'btn-primary' : 'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='B'; App.render()">🔍 發散探索模式</button>
+                    <button class="btn ${isModeA ? 'btn-primary' : 'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='A'; App.render()">🎯 目標逆推模式</button>
+                </div>
+                ${isModeA ? `<input type="text" id="target-job-input" placeholder="請輸入夢想職業 (例如：跨國企業 CFO、遊戲企劃)" value="${this.state.skillTreeTarget}" onchange="App.state.skillTreeTarget=this.value" style="margin-bottom:0;">` : `<div style="font-size:12px; color:#64748b; text-align:center;">AI 將自動根據現狀，為您發散出未來可能的高階發展路徑。</div>`}
+            </div>
+
+            <button class="btn btn-primary btn-full" style="padding:12px; font-size:16px; margin-bottom:20px;" onclick="App.generateSkillTree()" ${this.state.skillTreeGenerating?'disabled':''}>
+                ${this.state.skillTreeGenerating ? '✨ AI 運算中...' : '✨ 立即生成 / 更新技能樹'}
+            </button>
+
+            <div id="skill-network-container" style="${this.state.skillTreeGenerating?'opacity:0.3;':''}">
+                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#cbd5e1; font-size:14px;">點擊上方按鈕開始生成</div>
+            </div>
+
+            ${this.state.skillTreeReport ? `
+            <div style="background:#fffbeb; border:1px solid #fde68a; padding:15px; border-radius:8px;">
+                <h4 style="margin-top:0; color:#d97706;">📄 AI 綜合分析報告</h4>
+                <div style="font-size:13px; line-height:1.6; color:#451a03; white-space:pre-wrap;">${this.state.skillTreeReport}</div>
+            </div>` : ''}
+
+            <div style="margin-top:20px; border-top:1px dashed #cbd5e1; padding-top:15px;">
+                <label style="font-size:12px; font-weight:bold; color:var(--primary);">🔑 免費 Google Gemini API Key (僅存於本地)</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="password" id="api-key-input" placeholder="AIzaSy..." value="${this.getGeminiKey()}" style="margin-bottom:0;">
+                    <button class="btn btn-secondary" onclick="App.setGeminiKey(document.getElementById('api-key-input').value)">儲存</button>
+                </div>
+                <div style="font-size:11px; color:#94a3b8; margin-top:5px;"><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#3b82f6;">點此免費申請 Key</a>。您的 Key 絕對安全，不會上傳至資料庫。</div>
+            </div>
+        </div>`;
+    }
 
     if(tab === 'overview') {
       const totalHistory = p.history.length; const totalSkills = p.skills.length; const totalPlans = p.plans.length;
