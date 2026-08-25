@@ -1290,32 +1290,74 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
 ノード数は8〜15個程度にし、論理的にedgesで繋いでください。`;
 
       try {
-          const modelName = this.getGeminiModel();
-          const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
-              method: 'POST',
-              headers: { 
-                  'Content-Type': 'application/json',
-                  'X-goog-api-key': apiKey
-              },
-              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } })
-          });
+          const candidateModels = [
+              this.getGeminiModel(),
+              'gemini-3.6-flash',
+              'gemini-3.7-flash',
+              'gemini-2.5-flash',
+              'gemini-1.5-flash',
+              'gemini-1.5-pro'
+          ];
+          const modelsToTry = [...new Set(candidateModels.filter(Boolean))];
           
-          const result = await resp.json();
-          if (!resp.ok) {
-              const errDetail = result.error?.message || "Unknown API Error";
-              throw new Error(`API 錯誤: ${errDetail}`);
-          }
-          if (!result.candidates || result.candidates.length === 0) {
-              throw new Error("API はコンテンツを返しませんでした。後でもう一度お試しください。");
+          let lastError = null;
+          let treeData = null;
+          let successfulModel = null;
+
+          for (const modelName of modelsToTry) {
+              try {
+                  console.log(`[AI Skill Tree] Trying model: ${modelName}...`);
+                  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
+                      method: 'POST',
+                      headers: { 
+                          'Content-Type': 'application/json',
+                          'X-goog-api-key': apiKey
+                      },
+                      body: JSON.stringify({ 
+                          contents: [{ parts: [{ text: prompt }] }], 
+                          generationConfig: { responseMimeType: "application/json" } 
+                      })
+                  });
+                  
+                  const result = await resp.json();
+                  if (!resp.ok) {
+                      const errDetail = result.error?.message || `HTTP ${resp.status} Error`;
+                      lastError = new Error(`[${modelName}] ${errDetail}`);
+                      console.warn(`[AI Skill Tree] Model ${modelName} failed:`, errDetail);
+                      continue; // 嘗試下一個備援模型
+                  }
+                  
+                  if (!result.candidates || result.candidates.length === 0) {
+                      lastError = new Error(`[${modelName}] API はコンテンツを返しませんでした。`);
+                      continue;
+                  }
+
+                  let rawText = result.candidates[0].content.parts[0].text.trim();
+                  // 去除可能夾帶的 ```json ``` 區塊
+                  if (rawText.startsWith('```')) {
+                      rawText = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+                  }
+
+                  treeData = JSON.parse(rawText);
+                  successfulModel = modelName;
+                  break; // 成功取得並解析資料，跳出迴圈
+              } catch(modelErr) {
+                  lastError = modelErr;
+                  console.warn(`[AI Skill Tree] Attempt with ${modelName} failed:`, modelErr.message);
+              }
           }
 
-          let text = result.candidates[0].content.parts[0].text;
-          const treeData = JSON.parse(text);
+          if (!treeData) {
+              throw lastError || new Error("すべてのAIモデルがビジー状態です。しばらく待ってから再試行してください。");
+          }
+
+          console.log(`[AI Skill Tree] Successfully generated tree using: ${successfulModel}`);
           
           if (!this.state.skillTreeCaches[pId]) this.state.skillTreeCaches[pId] = {};
           this.state.skillTreeCaches[pId][mode] = { 
               data: { nodes: treeData.nodes, edges: treeData.edges }, 
-              report: treeData.report 
+              report: treeData.report,
+              modelUsed: successfulModel
           };
           this.state.skillTreeGenerating = false;
           
@@ -1325,7 +1367,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
           console.error("Skill Tree Generation Error:", e);
           this.state.skillTreeGenerating = false; 
           this.render(); 
-          this.showAlert("生成失敗，原因：\n" + e.message + "\n\n(ヒント：エラーが発生した場合は、下のAIモデルを gemini-3.6-flash または gemini-3.7-flash に変更してみてください)"); 
+          this.showAlert("生成失敗，原因：\n" + e.message + "\n\n(目前 Google 伺服器流量較大，已為您自動嘗試備援模型。請稍候 5~10 秒後再次點擊即可！)"); 
       }
   },
 
