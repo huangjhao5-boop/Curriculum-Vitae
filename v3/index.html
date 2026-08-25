@@ -11,10 +11,17 @@
   </script>
 
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>人生履歴書 V3.0 (完全版)</title>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="人生履歴書">
+  <meta name="theme-color" content="#0f766e">
+  <title>人生履歴書 V3.0 (Pro PWA Edition)</title>
+
+  <!-- Google Fonts: Inter & Noto Sans JP -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 
   <!-- Chart.js for Radar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -23,100 +30,407 @@
 
   <style>
     /* =========================================
-       1. 基本デザイン (Base Design)
+       1. 現代美學設計系統 (Modern Design System)
        ========================================= */
     :root {
       --primary: #0f766e;
-      --plan-my: #8b5cf6;
+      --primary-light: #14b8a6;
+      --primary-dark: #115e59;
+      --primary-gradient: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+      
+      --plan-my: #6366f1;
       --plan-parent: #f59e0b;
       --skill-color: #10b981;
       --achieve-color: #f97316;
       --birth-color: #ec4899;
       --diary-color: #3b82f6;
-      --bg-color: #f1f5f9;
-      --card-bg: #ffffff;
-      --text-main: #334155;
+      
+      --bg-color: #f8fafc;
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --card-border: rgba(226, 232, 240, 0.8);
+      --glass-bg: rgba(255, 255, 255, 0.82);
+      
+      --text-main: #1e293b;
       --text-sub: #64748b;
-      --border: #cbd5e1;
+      --text-muted: #94a3b8;
+      
+      --border: #e2e8f0;
+      --border-focus: #0d9488;
       --danger: #ef4444;
       --success: #10b981;
-      --radius: 12px;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --shadow-glow: 0 0 20px rgba(15, 118, 110, 0.2);
+      
+      --radius-sm: 8px;
+      --radius: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
     }
-    body { font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      line-height: 1.5;
+      letter-spacing: -0.01em;
+    }
     *, *::before, *::after { box-sizing: inherit; }
     
-    .container { max-width: 1000px; margin: 0 auto; padding: 20px; padding-bottom: 100px; }
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-    .card-title { font-size: 18px; font-weight: bold; color: var(--primary); border-bottom: 2px solid var(--bg-color); padding-bottom: 12px; margin-top: 0; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;}
+    .container { max-width: 1060px; margin: 0 auto; padding: 20px 16px; padding-bottom: 120px; }
+    
+    /* Modern Glass Card */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-md);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card:hover {
+      box-shadow: var(--shadow-lg);
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary-dark);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+      margin-top: 0;
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
     
     /* Stats & Radar Chart */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
-    .stat-box { background: #f8fafc; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #e2e8f0; }
-    .stat-val { font-size: 20px; font-weight: bold; color: var(--primary); }
-    .stat-label { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
-    .chart-container { position: relative; height: 300px; width: 100%; margin-bottom: 20px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-box {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      padding: 16px 12px;
+      border-radius: var(--radius-sm);
+      text-align: center;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s;
+    }
+    .stat-box:hover { transform: translateY(-2px); border-color: var(--primary-light); }
+    .stat-val { font-size: 24px; font-weight: 800; color: var(--primary); letter-spacing: -0.02em; }
+    .stat-label { font-size: 12px; font-weight: 500; color: var(--text-sub); margin-top: 4px; }
+    .chart-container { position: relative; height: 280px; width: 100%; margin-bottom: 10px; }
 
-    .btn { padding: 10px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
-    .btn:active { transform: scale(0.96); }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-secondary { background: #e2e8f0; color: var(--text-main); }
-    .btn-danger { background: #fee2e2; color: var(--danger); }
-    .btn-success { background: var(--success); color: white; }
+    /* Buttons */
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: var(--shadow-sm);
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary-gradient); color: white; }
+    .btn-primary:hover { box-shadow: 0 4px 12px rgba(15, 118, 110, 0.35); }
+    .btn-secondary { background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-danger { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
     .btn-google { background: #ffffff; color: #334155; border: 1px solid #cbd5e1; }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
     .btn-full { width: 100%; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; }
 
-    input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; margin-bottom: 12px; background: #fff; appearance: none; }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1); }
-    input:disabled, select:disabled, textarea:disabled { background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
-    input[type="checkbox"], input[type="radio"] { transform: scale(1.3); margin-right: 10px; cursor: pointer; width: auto; appearance: auto; }
+    /* Inputs */
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      margin-bottom: 14px;
+      background: #ffffff;
+      color: var(--text-main);
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+    }
+    input:disabled, select:disabled, textarea:disabled { background-color: #f8fafc; color: var(--text-muted); cursor: not-allowed; }
+    input[type="checkbox"], input[type="radio"] { transform: scale(1.2); margin-right: 8px; cursor: pointer; width: auto; }
     
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .hidden { display: none !important; }
 
-    /* Header */
-    .header { background: var(--card-bg); padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .user-pill { display: flex; align-items: center; gap: 8px; padding: 4px 12px; background: #f0fdf4; border-radius: 30px; font-size: 12px; color: #166534; border: 1px solid #dcfce7; }
-    .user-avatar { width: 24px; height: 24px; border-radius: 50%; }
-    .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+    /* Header with Blur */
+    .header {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 12px 24px;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--primary-dark);
+    }
+    .sync-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+    }
     .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
-    .sync-dot.online { background: #10b981; }
-    .sync-dot.syncing { background: #8b5cf6; animation: blink 1s infinite; }
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .sync-dot.online { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    .sync-dot.syncing { background: #8b5cf6; animation: blink 1s infinite; box-shadow: 0 0 8px #8b5cf6; }
+    @keyframes blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } }
 
-    /* Tabs */
-    .tabs-wrapper { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 20px; padding-bottom: 5px; border-bottom: 1px solid var(--border); -webkit-overflow-scrolling: touch; }
-    .tab { padding: 12px 16px; cursor: pointer; font-size: 14px; color: var(--text-sub); border-bottom: 3px solid transparent; white-space: nowrap; transition: 0.2s; }
-    .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: bold; }
+    /* Modern Segmented Pill Tabs */
+    .tabs-wrapper {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      margin-bottom: 22px;
+      padding: 6px;
+      background: #f1f5f9;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tabs-wrapper::-webkit-scrollbar { display: none; }
+    .tab {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-sub);
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tab:hover { color: var(--primary); background: rgba(255,255,255,0.6); }
+    .tab.active {
+      color: var(--primary-dark);
+      background: #ffffff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      font-weight: 700;
+    }
+
+    /* Timeline Filter Chips */
+    .timeline-filter-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      scrollbar-width: none;
+    }
+    .timeline-filter-bar::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #f1f5f9;
+      color: var(--text-sub);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      box-shadow: 0 2px 6px rgba(15, 118, 110, 0.3);
+    }
 
     /* Timeline & Lists */
-    .list-item { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 12px; display: flex; gap: 15px; align-items: flex-start; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+    .list-item {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      justify-content: space-between;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+    }
+    .list-item:hover {
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow-md);
+    }
     .item-content { flex: 1; cursor: pointer; }
-    .item-meta { font-size: 12px; color: var(--text-sub); margin-bottom: 5px; display: flex; gap: 6px; align-items: center;}
-    .item-title { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: var(--text-main); }
-    .item-desc { font-size: 13px; color: #475569; line-height: 1.4; white-space: pre-wrap; }
+    .item-meta { font-size: 12px; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; display: flex; gap: 8px; align-items: center;}
+    .item-title { font-weight: 700; font-size: 16px; margin-bottom: 6px; color: var(--text-main); }
+    .item-desc { font-size: 13.5px; color: #475569; line-height: 1.5; white-space: pre-wrap; }
     
-    .tag { padding: 2px 8px; border-radius: 12px; font-size: 11px; color: white; font-weight: bold; }
-    .badge-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+    .tag { padding: 3px 10px; border-radius: var(--radius-full); font-size: 11px; color: white; font-weight: 700; letter-spacing: 0.02em; }
+    .badge-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 3px 10px; border-radius: var(--radius-full); font-size: 11px; font-weight: 700; }
 
     .timeline-dual { position: relative; margin: 20px 0; padding: 10px 0; }
-    .timeline-dual::after { content: ''; position: absolute; width: 4px; background-color: var(--border); top: 0; bottom: 0; left: 50%; transform: translateX(-50%); border-radius: 2px; }
-    .tl-container { padding: 10px 30px; position: relative; width: 50%; box-sizing: border-box; }
+    .timeline-dual::after { content: ''; position: absolute; width: 4px; background: linear-gradient(180deg, #cbd5e1 0%, #e2e8f0 100%); top: 0; bottom: 0; left: 50%; transform: translateX(-50%); border-radius: 4px; }
+    .tl-container { padding: 12px 32px; position: relative; width: 50%; box-sizing: border-box; }
     .tl-left { left: 0; text-align: right; }
     .tl-right { left: 50%; text-align: left; }
-    .tl-dot { position: absolute; width: 14px; height: 14px; background-color: white; top: 18px; border-radius: 50%; z-index: 1; border: 3px solid; }
-    .tl-left .tl-dot { right: -7px; }
-    .tl-right .tl-dot { left: -7px; }
-    .tl-content { padding: 15px; background: white; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .tl-dot { position: absolute; width: 16px; height: 16px; background-color: white; top: 22px; border-radius: 50%; z-index: 2; border: 4px solid; box-shadow: 0 0 0 3px rgba(255,255,255,0.8); }
+    .tl-left .tl-dot { right: -8px; }
+    .tl-right .tl-dot { left: -8px; }
+    .tl-content { padding: 18px; background: white; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: transform 0.2s, box-shadow 0.2s; }
+    .tl-content:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
-    .photo-thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; cursor: zoom-in; }
-    .profile-photo-area { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 15px; border: 1px dashed var(--border); border-radius: 8px; background: #f8fafc; }
-    .profile-photo-img { width: 100px; height: 130px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; cursor: zoom-in;}
+    .photo-thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: zoom-in; transition: transform 0.2s; }
+    .photo-thumb:hover { transform: scale(1.05); }
+    .profile-photo-area { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px; border: 2px dashed var(--border); border-radius: var(--radius); background: #f8fafc; }
+    .profile-photo-img { width: 110px; height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: zoom-in; box-shadow: var(--shadow-md); }
+
+    /* Life Progress Hero */
+    .life-hero {
+      background: linear-gradient(135deg, #0f766e 0%, #0d9488 45%, #14b8a6 100%);
+      color: white;
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 25px -5px rgba(15, 118, 110, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+    .life-hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
+      border-radius: 50%;
+    }
+    .progress-bar-bg {
+      background: rgba(255, 255, 255, 0.25);
+      height: 12px;
+      border-radius: 12px;
+      margin-top: 16px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #fde047 0%, #4ade80 50%, #38bdf8 100%);
+      border-radius: 12px;
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 10px rgba(253, 224, 71, 0.5);
+    }
+
+    /* PWA Install Banner */
+    .pwa-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: white;
+      padding: 14px 20px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+    }
+
+    /* Floating Action Button (FAB) */
+    .fab-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--primary-gradient);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 8px 24px rgba(15, 118, 110, 0.45);
+      border: none;
+      cursor: pointer;
+      z-index: 99;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .fab-btn:hover { transform: scale(1.1) rotate(90deg); }
+
+    /* Canvas Floating Controls */
+    .canvas-control-bar {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(8px);
+      padding: 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      z-index: 10;
+    }
+    .canvas-ctrl-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+    .canvas-ctrl-btn:hover { background: #f1f5f9; color: var(--primary); }
 
     /* Image Viewer (Lightbox) */
-    .image-viewer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: flex; justify-content: center; align-items: center; cursor: zoom-out; }
-    .image-viewer-img { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); object-fit: contain; }
+    .image-viewer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); backdrop-filter: blur(8px); z-index: 3000; display: flex; justify-content: center; align-items: center; cursor: zoom-out; }
+    .image-viewer-img { max-width: 92%; max-height: 92%; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); object-fit: contain; }
 
     /* Export Selector */
     .export-check-list { max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: #f8fafc; margin-bottom: 10px; }
@@ -124,21 +438,27 @@
     .export-check-item input[type="checkbox"] { margin: 0 8px 0 0; width: 16px; height: 16px; }
 
     /* Overlays & Loaders */
-    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(241, 245, 249, 0.98); z-index: 2000; display: flex; justify-content: center; align-items: center; overflow-y: auto; padding:20px;}
-    .dialog-box { background: white; padding: 30px; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); margin:auto; }
-    .modal-box { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
-    .custom-dialog-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center; padding:20px; }
-    .custom-dialog-box { background: white; padding: 25px; border-radius: 16px; width: 100%; max-width: 360px; text-align: center; }
+    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(6px); z-index: 2000; display: flex; justify-content: center; align-items: center; overflow-y: auto; padding:20px;}
+    .dialog-box { background: white; padding: 32px; border-radius: var(--radius-lg); width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); margin:auto; }
+    .modal-box { background: white; padding: 28px; border-radius: var(--radius-lg); width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+    .custom-dialog-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(6px); z-index: 9999; display: flex; justify-content: center; align-items: center; padding:20px; }
+    .custom-dialog-box { background: white; padding: 28px; border-radius: var(--radius-lg); width: 100%; max-width: 380px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
     
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .loader-spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+    .loader-spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 44px; height: 44px; animation: spin 0.8s linear infinite; margin: 20px auto; }
 
-    @media screen and (max-width: 600px) {
-      .timeline-dual::after { left: 20px; }
-      .tl-container { width: 100%; padding-left: 40px; padding-right: 0; text-align: left !important; left: 0 !important; }
-      .tl-left .tl-dot, .tl-right .tl-dot { left: 12px; }
-      .tl-content { border-left-width: 4px !important; border-right-width: 1px !important; }
-      .grid-2 { grid-template-columns: 1fr; gap: 10px; }
+    @media screen and (max-width: 680px) {
+      .container { padding: 12px; }
+      .header { padding: 10px 16px; }
+      .timeline-dual::after { left: 16px; }
+      .tl-container { width: 100%; padding-left: 36px; padding-right: 0; text-align: left !important; left: 0 !important; }
+      .tl-left .tl-dot, .tl-right .tl-dot { left: 8px; }
+      .tl-content { border-left-width: 4px !important; border-right-width: 1px !important; padding: 14px; }
+      .grid-2 { grid-template-columns: 1fr; gap: 12px; }
+      .card { padding: 18px; }
+      .fab-btn { bottom: 20px; right: 20px; width: 52px; height: 52px; font-size: 22px; }
+      .modal-box { padding: 20px; border-radius: var(--radius) var(--radius) 0 0; position: fixed; bottom: 0; max-height: 85vh; width: 100%; max-width: 100%; }
+      .overlay { padding: 0; align-items: flex-end; }
     }
 
     /* =========================================
@@ -191,7 +511,7 @@
     }
 
     /* Skill Tree Container */
-    #skill-network-container { width: 100%; height: 500px; border: 1px solid var(--border); border-radius: 8px; background: #fff; margin-bottom:15px; }
+    #skill-network-container { width: 100%; height: 520px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; margin-bottom:15px; position: relative; }
   </style>
 </head>
 <body>
@@ -201,21 +521,53 @@
 
 <script>
 /**
- * PWA Manifest Injection
+ * PWA Service Worker & Manifest Injection
  */
 const manifestStr = JSON.stringify({
-  "name": "人生履歴書",
-  "short_name": "LifeResume",
-  "start_url": ".",
+  "name": "人生履歴書 - Life Resume Pro",
+  "short_name": "人生履歴書",
+  "description": "JIS R3規格準拠・AI動的スキルツリー・家族共有対応の次世代人生管理システム",
+  "start_url": "./",
   "display": "standalone",
-  "background_color": "#f1f5f9",
+  "background_color": "#0f766e",
   "theme_color": "#0f766e",
-  "icons": [{"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzBmNzY2ZSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjUwIiBmaWxsPSJ3aGl0ZSIgZG9taW5hbnQtYmFzZWxpbmU9ImNlbnRyYWwiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuiIpeSuseabuDwvdGV4dD48L3N2Zz4=", "sizes": "512x512", "type": "image/svg+xml"}]
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjMGY3NjZlIi8+PHRleHQgeD0iNTAiIHk9IjU2IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNDgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+6IilPC90ZXh0Pjwvc3ZnPg==",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjMGY3NjZlIi8+PHRleHQgeD0iNTAiIHk9IjU2IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNDgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+6IilPC90ZXh0Pjwvc3ZnPg==",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 });
 document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="data:application/manifest+json;charset=utf-8,${encodeURIComponent(manifestStr)}">`);
 
+// Inlined Service Worker for Offline PWA Caching
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE_NAME = 'life-resume-pwa-v3';
+    self.addEventListener('install', (e) => self.skipWaiting());
+    self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
+    self.addEventListener('fetch', (e) => {
+      if (e.request.method !== 'GET' || e.request.url.startsWith('chrome-extension')) return;
+      e.respondWith(
+        fetch(e.request).catch(() => caches.match(e.request))
+      );
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'text/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(console.warn);
+}
+
 /**
- * 人生履歴書 核心エンジン (V3.0 完全版)
+ * 人生履歴書 核心エンジン (V3.0 Pro PWA)
  */
 const STAGES = ['乳幼児期 (0-6歳)', '小学生 (7-12歳)', '中学生 (13-15歳)', '高校生 (16-18歳)', '大学/専門 (19-22歳)', '20代 (若手社会人)', '30代 (中堅)', '40代以降', '全期間共通'];
 const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニケーション', '専門資格'];
@@ -235,11 +587,15 @@ const App = {
   
   state: {
     view: 'login', activeProfileId: 'parent_self', activeTab: 'overview',
+    timelineFilter: 'all',
     modalContext: null, dialog: null, isSyncing: false, printFilter: null,
     viewImageSrc: null, loginProfileId: '',
     
-    // AI 專屬雙重快取系統：以 Profile ID 為第一層，模式為第二層
-    // 結構: { 'profile_id': { 'A': { data, report }, 'B': { data, report } } }
+    // PWA Install Prompt
+    deferredPrompt: null,
+    showPwaBanner: false,
+
+    // AI 快取系統
     skillTreeCaches: {}, 
     skillTreeMode: 'B', 
     skillTreeTarget: '', 
@@ -253,7 +609,26 @@ const App = {
     this.loadData();
     this.state.view = 'login';
     this.state.loginProfileId = '';
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.state.deferredPrompt = e;
+      this.state.showPwaBanner = true;
+      this.render();
+    });
+
     this.render();
+  },
+
+  promptPwaInstall() {
+    if (this.state.deferredPrompt) {
+      this.state.deferredPrompt.prompt();
+      this.state.deferredPrompt.userChoice.then((choice) => {
+        this.state.showPwaBanner = false;
+        this.state.deferredPrompt = null;
+        this.render();
+      });
+    }
   },
 
   trackEvent(eventName, eventParams = {}) {
@@ -265,6 +640,11 @@ const App = {
   changeTab(tabId) {
       this.state.activeTab = tabId;
       this.trackEvent('tab_view', { tab_name: tabId });
+      this.render();
+  },
+
+  setTimelineFilter(filter) {
+      this.state.timelineFilter = filter;
       this.render();
   },
 
@@ -420,7 +800,6 @@ const App = {
         if (input.value !== pwd) { this.showAlert('パスワードが正しくありません。'); return; }
     }
     
-    // 登入時清空圖表實例
     if (this.networkInstance) {
         this.networkInstance.destroy();
         this.networkInstance = null;
@@ -613,7 +992,6 @@ const App = {
       if(targetCategory === 'skills') newItem.dim = '専門資格'; 
       p[targetCategory].push(newItem);
       
-      // 同步更新當前 Profile 的 AI 雙模式快取
       const pId = this.state.activeProfileId;
       if (this.state.skillTreeCaches[pId]) {
           ['A', 'B'].forEach(mode => {
@@ -636,7 +1014,7 @@ const App = {
   grantAccess(category, itemId) { const item = this.getProfile()[category].find(i => i.id === itemId); if(item) { item.visibility = 'visible'; this.saveData(); this.render(); } },
   requestAccess(category, itemId) { const item = this.getProfile()[category].find(i => i.id === itemId); if(item) { item.visibility = 'requested'; this.saveData(); this.render(); this.showAlert('閲覧リクエストを送信しました。'); } },
 
-  /* === 家族共有コード発行 & データインポート (實作修復) === */
+  /* === 家族共有コード発行 & データインポート === */
   async generateShareCode() {
     const p = this.getProfile();
     if (!window.CloudSync?.isLoggedIn) {
@@ -679,7 +1057,7 @@ const App = {
             ...remoteData,
             id: newId,
             shareCode: cleanCode,
-            isClaimed: true // マーク: 共有受信プロフィール
+            isClaimed: true
         };
         this.saveData();
         window.CloudSync.listenToSharedProfiles();
@@ -731,7 +1109,6 @@ const App = {
       const pId = this.state.activeProfileId;
       const mode = this.state.skillTreeMode;
       
-      // 生成前清空當前快取
       if(this.state.skillTreeCaches[pId] && this.state.skillTreeCaches[pId][mode]) {
           this.state.skillTreeCaches[pId][mode] = null;
       }
@@ -742,7 +1119,6 @@ const App = {
       const p = this.getProfile();
       const b = p.basic;
 
-      // 計算精確年齡
       let ageStr = '未提供';
       if (b.birthday) {
           const bd = new Date(b.birthday);
@@ -866,15 +1242,21 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
 
           if(currentGroup === 'acquired') { color = { background: '#10b981', border: '#059669' }; }
           else if(currentGroup === 'pending') { color = { background: '#f59e0b', border: '#d97706' }; }
-          else if(currentGroup === 'target') { shape = 'star'; color = { background: '#3b82f6', border: '#2563eb' }; fontColor = '#1e40af'; }
+          else if(currentGroup === 'target') { shape = 'star'; color = { background: '#6366f1', border: '#4f46e5' }; fontColor = '#312e81'; }
           
-          return { ...n, color: color, shape: shape, font: { color: fontColor, size: 14, bold: true }, shadow: true };
+          return {
+            ...n, color: color, shape: shape,
+            font: { color: fontColor, size: 14, bold: true, face: 'Inter, Noto Sans JP' },
+            shadow: { enabled: true, color: 'rgba(0,0,0,0.12)', size: 8, x: 2, y: 4 },
+            margin: 10,
+            borderWidth: 2
+          };
       }));
 
       const edges = new vis.DataSet(edgesData.map(e => ({
           ...e, 
-          width: 2, 
-          color: { color: '#cbd5e1', highlight: '#8b5cf6' }, 
+          width: 2.5, 
+          color: { color: '#cbd5e1', highlight: '#6366f1' }, 
           arrows: 'to', 
           smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.4 }
       })));
@@ -886,9 +1268,9 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
               enabled: true,
               solver: 'barnesHut',
               barnesHut: { 
-                  gravitationalConstant: -2500, 
+                  gravitationalConstant: -2800, 
                   centralGravity: 0.1,         
-                  springLength: 120,           
+                  springLength: 130,           
                   springConstant: 0.04,        
                   damping: 0.09                
               },
@@ -925,6 +1307,22 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
       });
   },
 
+  zoomSkillTree(factor) {
+      if (!this.networkInstance) return;
+      const scale = this.networkInstance.getScale();
+      this.networkInstance.moveTo({ scale: scale * factor, animation: { duration: 300 } });
+  },
+  resetSkillTree() {
+      if (!this.networkInstance) return;
+      this.networkInstance.fit({ animation: { duration: 500 } });
+  },
+  togglePhysics() {
+      if (!this.networkInstance) return;
+      const isPhysics = this.networkInstance.physics.physicsEnabled;
+      this.networkInstance.setOptions({ physics: { enabled: !isPhysics } });
+      this.showAlert(!isPhysics ? "物理シミュレーションを再開しました" : "物理シミュレーションを一時停止しました");
+  },
+
   drawRadarChart() {
     const canvas = document.getElementById('skillRadarChart');
     if (!canvas || typeof Chart === 'undefined') return;
@@ -946,14 +1344,26 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
             datasets: [{
                 label: '能力パラメーター',
                 data: dataVals,
-                backgroundColor: 'rgba(15, 118, 110, 0.2)',
+                backgroundColor: 'rgba(15, 118, 110, 0.25)',
                 borderColor: 'rgba(15, 118, 110, 1)',
-                pointBackgroundColor: 'rgba(15, 118, 110, 1)',
-                borderWidth: 2
+                pointBackgroundColor: 'rgba(13, 148, 136, 1)',
+                pointBorderColor: '#ffffff',
+                pointHoverBackgroundColor: '#ffffff',
+                pointHoverBorderColor: 'rgba(13, 148, 136, 1)',
+                pointRadius: 4,
+                borderWidth: 2.5
             }]
         },
         options: {
-            scales: { r: { min: 0, max: 100, ticks: { display: false } } },
+            scales: {
+                r: {
+                    min: 0, max: 100,
+                    ticks: { display: false, stepSize: 20 },
+                    grid: { color: 'rgba(226, 232, 240, 0.8)' },
+                    angleLines: { color: 'rgba(226, 232, 240, 0.8)' },
+                    pointLabels: { font: { size: 12, weight: '600', family: 'Inter, Noto Sans JP' }, color: '#475569' }
+                }
+            },
             plugins: { legend: { display: false } },
             maintainAspectRatio: false
         }
@@ -993,14 +1403,14 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
   updateHeaderSyncUI() {
     const ind = document.getElementById('sync-indicator');
     if(!ind) return;
-    if(window.CloudSync?.isLoggedIn) { ind.innerHTML = `<div class="sync-dot ${this.state.isSyncing?'syncing':'online'}"></div> <span style="color:#64748b;">${this.state.isSyncing?'同期中':'同期済'}</span>`; } 
+    if(window.CloudSync?.isLoggedIn) { ind.innerHTML = `<div class="sync-dot ${this.state.isSyncing?'syncing':'online'}"></div> <span>${this.state.isSyncing?'同期中...':'クラウド同期済'}</span>`; } 
     else { ind.innerHTML = `<span style="color:#94a3b8;">未ログイン (ローカル)</span>`; }
   },
 
   templateImageViewer() {
     return `<div class="image-viewer-overlay" onclick="App.closeImageViewer()">
         <img src="${this.state.viewImageSrc}" class="image-viewer-img" onclick="event.stopPropagation()">
-        <button class="btn btn-secondary" style="position:absolute; top:20px; right:20px; border-radius:50%; width:40px; height:40px; font-size:24px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="App.closeImageViewer()">×</button>
+        <button class="btn btn-secondary" style="position:absolute; top:24px; right:24px; border-radius:50%; width:44px; height:44px; font-size:24px; padding:0; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.3);" onclick="App.closeImageViewer()">×</button>
     </div>`;
   },
 
@@ -1008,7 +1418,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     const d = this.state.dialog; 
     let inputHtml = '', btns = '';
     if (d.type === 'prompt') {
-        inputHtml = `<input type="text" id="dialog-input" style="width:100%; margin-top:15px;">`;
+        inputHtml = `<input type="text" id="dialog-input" style="width:100%; margin-top:15px;" placeholder="入力してください">`;
         btns = `<div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.state.dialog=null; App.render()">キャンセル</button><button class="btn btn-primary btn-full" onclick="const v=document.getElementById('dialog-input'); App.state.dialog.onConfirm(v?v.value:null)">確定</button></div>`;
     } else if (d.type === 'alert') {
         btns = `<button class="btn btn-primary btn-full" onclick="App.state.dialog.onConfirm ? App.state.dialog.onConfirm() : (App.state.dialog=null, App.render())">確認</button>`;
@@ -1025,7 +1435,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     } else if (d.type === 'loading') {
         inputHtml = `<div class="loader-spinner"></div>`;
     }
-    return `<div class="custom-dialog-overlay"><div class="custom-dialog-box"><h3 style="white-space:pre-wrap; margin-top:0;">${d.message}</h3>${inputHtml}<div style="margin-top:20px;">${btns}</div></div></div>`;
+    return `<div class="custom-dialog-overlay"><div class="custom-dialog-box"><h3 style="white-space:pre-wrap; margin-top:0; font-size:17px; font-weight:700;">${d.message}</h3>${inputHtml}<div style="margin-top:20px;">${btns}</div></div></div>`;
   },
 
   templateLogin() {
@@ -1036,22 +1446,25 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     if (!this.state.loginProfileId) {
         let loginBtns = '';
         if (mainProf) {
-            loginBtns += `<button class="btn btn-primary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.state.loginProfileId='${mainId}'; App.executeLogin()">${mainProf.name} (メイン) ログイン</button>`;
+            loginBtns += `<button class="btn btn-primary btn-full" style="margin-bottom:14px; padding:16px; font-size:16px;" onclick="App.state.loginProfileId='${mainId}'; App.executeLogin()">👤 ${mainProf.name} (メイン) ログイン</button>`;
         }
         otherIds.forEach(id => {
             const prof = this.data.profiles[id];
             if (!prof.isClaimed) {
-                loginBtns += `<button class="btn btn-secondary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.state.loginProfileId='${id}'; App.executeLogin()">${prof.name} (お子様) ログイン</button>`;
+                loginBtns += `<button class="btn btn-secondary btn-full" style="margin-bottom:12px; padding:14px; font-size:15px;" onclick="App.state.loginProfileId='${id}'; App.executeLogin()">🌱 ${prof.name} (お子様) ログイン</button>`;
             } else {
-                loginBtns += `<button class="btn btn-secondary btn-full" style="margin-bottom:12px; padding:15px;" onclick="App.state.loginProfileId='${id}'; App.executeLogin()">🔗 ${prof.name} (共有) ログイン</button>`;
+                loginBtns += `<button class="btn btn-secondary btn-full" style="margin-bottom:12px; padding:14px; font-size:15px;" onclick="App.state.loginProfileId='${id}'; App.executeLogin()">🔗 ${prof.name} (共有) ログイン</button>`;
             }
         });
 
-        return `<div class="overlay"><div class="dialog-box" style="text-align:center;"><h2>人生履歴書 V3.0</h2>
+        return `<div class="overlay"><div class="dialog-box" style="text-align:center;">
+        <div style="font-size:36px; margin-bottom:8px;">📖</div>
+        <h2 style="font-weight:800; color:var(--primary-dark); margin-top:0; margin-bottom:6px; letter-spacing:-0.02em;">人生履歴書</h2>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:24px; font-weight:600;">V3.0 Pro PWA Edition</div>
         ${loginBtns}
-        <div style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
-          <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px; margin-top:15px;">オフライン・データ移行</p>
-          <button class="btn btn-secondary btn-full" onclick="document.getElementById('login-import-json').click()">📁 ローカルデータを復元 (.json)</button>
+        <div style="margin-top:28px; border-top:1px dashed var(--border); padding-top:20px;">
+          <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; font-weight:500;">オフライン・データ移行</p>
+          <button class="btn btn-secondary btn-full btn-sm" onclick="document.getElementById('login-import-json').click()">📁 ローカルデータを復元 (.json)</button>
           <input type="file" id="login-import-json" class="hidden" accept=".json" onchange="App.importLocalData(event)">
         </div></div></div>`;
     }
@@ -1066,8 +1479,9 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     }
     
     return `<div class="overlay"><div class="dialog-box" style="text-align:center;">
-    <h3>${prof.name} の認証</h3>
-    <input type="password" id="login-pwd" placeholder="パスワードを入力" style="text-align:center; margin-bottom:15px;">
+    <h3 style="font-weight:700; margin-top:0;">${prof.name} の認証</h3>
+    <p style="font-size:13px; color:var(--text-sub); margin-bottom:16px;">設定したパスワードを入力してください</p>
+    <input type="password" id="login-pwd" placeholder="パスワードを入力" style="text-align:center; margin-bottom:16px; font-size:16px; letter-spacing:4px;">
     <div class="grid-2">
     <button class="btn btn-secondary btn-full" onclick="App.state.loginProfileId=''; App.render()">戻る</button>
     <button class="btn btn-primary btn-full" onclick="App.executeLogin()">ログイン</button>
@@ -1082,40 +1496,105 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     const b = p.basic; const age = b.birthday ? Math.floor((Date.now() - new Date(b.birthday).getTime()) / 31557600000) : 0;
     const lifeBase = b.gender === 'female' ? 87 : 81; const lifePct = Math.min(100, Math.round((age / lifeBase) * 100));
 
+    // 年齡階段分析
+    let stageTitle = "成長期 (0-22歳)";
+    if (age >= 23 && age <= 35) stageTitle = "青年・開拓期 (23-35歳)";
+    else if (age >= 36 && age <= 50) stageTitle = "充実・飛躍期 (36-50歳)";
+    else if (age >= 51 && age <= 65) stageTitle = "黄金・円熟期 (51-65歳)";
+    else if (age >= 66) stageTitle = "自由・ライフワーク (66歳~)";
+
     let profileSelect = '';
     if (this.state.loginProfileId === mainId) {
-        profileSelect = `<select onchange="App.switchProfile(this.value)" style="width:auto; margin:0;">
-            <option value="${mainId}" ${p.id === mainId ? 'selected' : ''}>${this.data.profiles[mainId].name} の記録</option>
+        profileSelect = `<select onchange="App.switchProfile(this.value)" style="width:auto; margin:0; padding:8px 12px; font-size:13px; font-weight:600;">
+            <option value="${mainId}" ${p.id === mainId ? 'selected' : ''}>👤 ${this.data.profiles[mainId].name} の記録</option>
             ${otherIds.map(id => {
                 const pr = this.data.profiles[id];
                 const label = pr.isClaimed ? '共有' : 'お子様';
-                return `<option value="${id}" ${p.id === id ? 'selected' : ''}>${pr.name} (${label})</option>`;
+                return `<option value="${id}" ${p.id === id ? 'selected' : ''}>🌱 ${pr.name} (${label})</option>`;
             }).join('')}
-        </select><button class="btn btn-primary btn-sm" onclick="App.addChild()">+子供</button>`;
+        </select><button class="btn btn-primary btn-sm" onclick="App.addChild()">+ 子供</button>`;
     } else {
-        profileSelect = `<span class="tag" style="background:var(--primary);">閲覧モード: ${p.name}</span>`;
+        profileSelect = `<span class="tag" style="background:var(--primary); font-size:12px; padding:6px 12px;">閲覧中: ${p.name}</span>`;
     }
 
-    return `<div class="header">
-      <div style="font-size:18px; font-weight:bold; color:var(--primary); display:flex; align-items:center;">📖 ${p.name} 
-      <div id="sync-indicator" class="sync-indicator" style="margin-left:10px;"></div>
+    const tabsList = [
+      ['overview', '📊 概要・対比'],
+      ['basic', '🪪 基本情報'],
+      ['history', '🎓 学歴・職歴'],
+      ['skills', '📜 免許・資格'],
+      ['achievements', '🏆 表彰・実績'],
+      ['diary', '📝 メモ・日記'],
+      ['plans', '🎯 目標管理'],
+      ['skilltree', '🌳 AI 技能樹'],
+      ['settings', '⚙️ 設定・共有']
+    ];
+
+    return `
+    <div class="header">
+      <div class="user-badge">
+        <span>📖 ${p.name}</span>
+        <div id="sync-indicator" class="sync-indicator"></div>
       </div>
-      <div style="display:flex; gap:10px; align-items:center;">
+      <div style="display:flex; gap:8px; align-items:center;">
         ${profileSelect}
         <button class="btn btn-secondary btn-sm" onclick="App.logout()">終了</button>
       </div>
     </div>
+
     <div class="container">
-      <div class="card" style="background: linear-gradient(135deg, #f0fdfa, #ffffff);">
-        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-          <div><div style="font-size:12px; font-weight:bold; color:var(--text-sub);">LIFE PROGRESS</div><div style="font-size:24px; font-weight:bold; color:var(--primary);">${age} 歳 <span style="font-size:14px; color:#94a3b8; font-weight:normal;">/ 期待寿命 ${lifeBase} 歳</span></div></div>
-          <div style="font-size:24px; font-weight:bold; color:var(--primary);">${lifePct}%</div>
+      ${this.state.showPwaBanner ? `
+      <div class="pwa-banner">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-size:24px;">📱</span>
+          <div>
+            <div style="font-weight:700; font-size:14px;">ホーム画面にアプリを追加</div>
+            <div style="font-size:12px; opacity:0.9;">全画面＆オフラインで快適に使えます</div>
+          </div>
         </div>
-        <div style="background:#e2e8f0; height:10px; border-radius:10px; margin-top:12px; overflow:hidden;"><div style="height:100%; background:var(--primary); width:${lifePct}%;"></div></div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-sm btn-secondary" onclick="App.state.showPwaBanner=false; App.render()">後で</button>
+          <button class="btn btn-sm btn-success" onclick="App.promptPwaInstall()">インストール</button>
+        </div>
+      </div>` : ''}
+
+      <!-- LIFE PROGRESS HERO -->
+      <div class="life-hero">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+          <div>
+            <div style="font-size:11px; font-weight:800; letter-spacing:1.5px; opacity:0.85; margin-bottom:4px;">LIFE PROGRESS & STAGE</div>
+            <div style="font-size:28px; font-weight:900; letter-spacing:-0.02em;">${age} <span style="font-size:16px; font-weight:500; opacity:0.9;">歳</span> <span style="font-size:13px; font-weight:600; background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:12px; margin-left:8px;">${stageTitle}</span></div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:28px; font-weight:900;">${lifePct}<span style="font-size:16px;">%</span></div>
+            <div style="font-size:11px; opacity:0.85;">期待寿命 ${lifeBase} 歳換算</div>
+          </div>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width:${lifePct}%;"></div>
+        </div>
       </div>
-      <div class="tabs-wrapper">${['overview:📊 分析・対比', 'basic:基本情報(JIS)', 'history:学歴・職歴', 'skills:免許・資格', 'achievements:表彰・出来事', 'diary:📝 メモ・日記', 'plans:🎯 目標管理', 'skilltree:🌳 AI 動的スキルツリー', 'settings:設定・共有'].map(t => { const [k, v] = t.split(':'); return `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.changeTab('${k}')">${v}</div>`; }).join('')}</div>
+
+      <!-- MODERN SEGMENTED TABS -->
+      <div class="tabs-wrapper">
+        ${tabsList.map(([k, label]) => `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.changeTab('${k}')">${label}</div>`).join('')}
+      </div>
+
+      <!-- MAIN TAB CONTENT -->
       <div id="tab-content">${this.renderTabContent(p)}</div>
-    </div>`;
+    </div>
+
+    <!-- FLOATING ACTION BUTTON (QUICK ADD) -->
+    <button class="fab-btn" title="新規追加" onclick="App.openQuickAddModal()">＋</button>
+    `;
+  },
+
+  openQuickAddModal() {
+    const tab = this.state.activeTab;
+    if (tab === 'history' || tab === 'skills' || tab === 'achievements' || tab === 'diary' || tab === 'plans') {
+        this.openModal(tab);
+    } else {
+        this.openModal('plans');
+    }
   },
 
   renderTabContent(p) {
@@ -1123,7 +1602,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     const myId = this.state.loginProfileId;
     const isReadOnly = p.id !== myId && p.isClaimed === true;
     
-    let topNotice = isReadOnly ? `<div style="background:#e0f2fe; color:#0369a1; padding:10px; border-radius:8px; margin-bottom:15px; font-size:12px; border:1px solid #bae6fd;">ℹ️ このプロフィールは共有受信中のため、閲覧および「期待」の追加のみ可能です。</div>` : '';
+    let topNotice = isReadOnly ? `<div style="background:#e0f2fe; color:#0369a1; padding:12px 16px; border-radius:var(--radius-sm); margin-bottom:18px; font-size:13px; font-weight:600; border:1px solid #bae6fd;">ℹ️ このプロフィールは共有受信中のため、閲覧および「期待」の追加のみ可能です。</div>` : '';
 
     if(tab === 'overview') {
       const totalHistory = p.history.length; const totalSkills = p.skills.length; const totalPlans = p.plans.length;
@@ -1140,22 +1619,43 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
                   <div class="stat-box"><div class="stat-val">${totalPlans}</div><div class="stat-label">設定プラン</div></div>
                 </div>
             </div>
-            <div class="card" style="margin-bottom:0; padding:10px;"><div style="font-size:12px; text-align:center; font-weight:bold; color:var(--primary); margin-bottom:5px;">能力パラメーター</div><div class="chart-container"><canvas id="skillRadarChart"></canvas></div></div>
+            <div class="card" style="margin-bottom:0; padding:16px;">
+              <div style="font-size:13px; text-align:center; font-weight:700; color:var(--primary-dark); margin-bottom:6px;">能力パラメーター</div>
+              <div class="chart-container"><canvas id="skillRadarChart"></canvas></div>
+            </div>
         </div>
-        <div class="card"><div class="card-title">タイムライン対比</div><div class="timeline-dual">`;
+
+        <div class="card">
+          <div class="card-title">
+            <span>⏱️ タイムライン対比</span>
+          </div>
+
+          <!-- Timeline Filter Chips -->
+          <div class="timeline-filter-bar">
+            ${[
+              ['all', 'すべて'],
+              ['history', '🎓 経歴'],
+              ['skills', '📜 資格'],
+              ['achievements', '🏆 実績'],
+              ['plans', '🎯 プラン'],
+              ['diary', '📝 メモ']
+            ].map(([fKey, fLabel]) => `<div class="filter-chip ${this.state.timelineFilter === fKey ? 'active' : ''}" onclick="App.setTimelineFilter('${fKey}')">${fLabel}</div>`).join('')}
+          </div>
+
+          <div class="timeline-dual">`;
       
       let items = [];
-      if(b.birthday) items.push({ year: new Date(b.birthday).getFullYear(), month: new Date(b.birthday).getMonth()+1, title: '誕生', catLabel: 'Birth', isPlan: false, color: 'var(--birth-color)' });
-      p.history.forEach(i => items.push({...i, catLabel: '経歴', color: 'var(--primary)'}));
-      p.skills.forEach(i => items.push({...i, catLabel: '資格', color: 'var(--skill-color)'}));
-      p.achievements.forEach(i => items.push({...i, catLabel: '実績', color: 'var(--achieve-color)'}));
+      if(b.birthday) items.push({ filterType: 'history', year: new Date(b.birthday).getFullYear(), month: new Date(b.birthday).getMonth()+1, title: '誕生', catLabel: 'Birth', isPlan: false, color: 'var(--birth-color)' });
+      p.history.forEach(i => items.push({...i, filterType: 'history', catLabel: '経歴', color: 'var(--primary)'}));
+      p.skills.forEach(i => items.push({...i, filterType: 'skills', catLabel: '資格', color: 'var(--skill-color)'}));
+      p.achievements.forEach(i => items.push({...i, filterType: 'achievements', catLabel: '実績', color: 'var(--achieve-color)'}));
       
       (p.diary||[]).forEach(i => {
           const isOwner = i.author === myId;
           if (isOwner || i.visibility === 'visible') {
-              items.push({...i, catLabel: 'メモ', color: 'var(--diary-color)', displayDate: i.date});
+              items.push({...i, filterType: 'diary', catLabel: 'メモ', color: 'var(--diary-color)', displayDate: i.date});
           } else {
-              items.push({ year: i.year, month: i.month, title: '🔒 未公開メモ', catLabel: 'メモ', color: '#cbd5e1', displayDate: i.date });
+              items.push({ filterType: 'diary', year: i.year, month: i.month, title: '🔒 未公開メモ', catLabel: 'メモ', color: '#cbd5e1', displayDate: i.date });
           }
       });
       
@@ -1172,31 +1672,41 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
               color = i.author === myId ? 'var(--plan-parent)' : 'var(--plan-my)';
           }
 
-          if(isOwner || i.visibility === 'visible') items.push({...i, catLabel: label, isPlan:true, color: color, status: i.status});
-          else items.push({ year: i.year, month: i.month, title: '🔒 未公開目標', catLabel: label, isPlan: true, color: '#cbd5e1' }); 
+          if(isOwner || i.visibility === 'visible') items.push({...i, filterType: 'plans', catLabel: label, isPlan:true, color: color, status: i.status});
+          else items.push({ filterType: 'plans', year: i.year, month: i.month, title: '🔒 未公開目標', catLabel: label, isPlan: true, color: '#cbd5e1' }); 
       });
+
+      // 篩選處理
+      if (this.state.timelineFilter !== 'all') {
+          items = items.filter(i => i.filterType === this.state.timelineFilter);
+      }
+
       items.sort((a,b) => (a.year||0)-(b.year||0) || (a.month||0)-(b.month||0));
       
+      if (items.length === 0) {
+          html += `<div style="text-align:center; color:var(--text-muted); padding:30px; font-size:14px;">該当する記録がありません</div>`;
+      }
+
       items.forEach(i => {
         const titleDecor = i.status === 'completed' ? ` <span class="badge-success">達成済</span>` : '';
         const dateStr = i.displayDate ? i.displayDate.replace(/-/g, '/') : `${i.year||'?'}年${i.month?i.month+'月':''}`;
         const titleFontSize = i.catLabel === 'メモ' ? '14px' : '16px';
-        const titleFontWeight = i.catLabel === 'メモ' ? 'normal' : 'bold';
+        const titleFontWeight = i.catLabel === 'メモ' ? '500' : '700';
 
-        html += `<div class="tl-container ${i.isPlan?'tl-right':'tl-left'}"><div class="tl-dot" style="border-color: ${i.color};"></div><div class="tl-content" style="border-${i.isPlan?'left':'right'}:4px solid ${i.color};"><div style="font-size:11px; font-weight:bold; color:var(--text-sub);"><span class="tag" style="background:${i.color}">${i.catLabel}</span> ${dateStr}</div><div style="font-weight:${titleFontWeight}; font-size:${titleFontSize}; margin-top:4px; white-space:pre-wrap;">${i.title} ${i.eduStatus?`[${i.eduStatus}]`:''} ${titleDecor}</div>${i.desc?`<div style="font-size:12px; color:var(--text-sub); margin-top:4px;">${i.desc}</div>`:''}${i.photo?`<img src="${i.photo}" style="width:100%; max-width:200px; margin-top:8px; border-radius:4px; cursor:zoom-in; border:1px solid #e2e8f0;" onclick="App.viewImage('${i.photo}')">`:''}</div></div>`;
+        html += `<div class="tl-container ${i.isPlan?'tl-right':'tl-left'}"><div class="tl-dot" style="border-color: ${i.color};"></div><div class="tl-content" style="border-${i.isPlan?'left':'right'}:4px solid ${i.color};"><div style="font-size:11px; font-weight:700; color:var(--text-sub);"><span class="tag" style="background:${i.color}">${i.catLabel}</span> ${dateStr}</div><div style="font-weight:${titleFontWeight}; font-size:${titleFontSize}; margin-top:6px; white-space:pre-wrap;">${i.title} ${i.eduStatus?`[${i.eduStatus}]`:''} ${titleDecor}</div>${i.desc?`<div style="font-size:12.5px; color:var(--text-sub); margin-top:6px; line-height:1.4;">${i.desc}</div>`:''}${i.photo?`<img src="${i.photo}" style="width:100%; max-width:200px; margin-top:10px; border-radius:8px; cursor:zoom-in; border:1px solid #e2e8f0;" onclick="App.viewImage('${i.photo}')">`:''}</div></div>`;
       });
       return html + `</div></div>`;
     }
 
     if(tab === 'basic') {
       const todayStr = this.getLocalTodayString();
-      return topNotice + `<div class="card"><div class="card-title">JIS 基礎情報 (R3規格)</div><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img" style="cursor:zoom-in;" onclick="App.viewImage('${b.photo}')">${isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">削除</button>`}` : `<div style="width:100px; height:130px; border:1px dashed #ccc; display:flex; align-items:center; justify-content:center;">📷</div>${isReadOnly ? '' : `<button class="btn btn-primary btn-sm" onclick="App.uploadPhoto('basic')">写真貼付</button>`}`}</div><div><label>氏名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)" ${isReadOnly ? 'disabled' : ''}><label>ふりがな</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)" ${isReadOnly ? 'disabled' : ''}><div class="grid-2"><div><label>性別 (任意)</label><select onchange="App.updateBasic('gender', this.value)" ${isReadOnly ? 'disabled' : ''}><option value="" ${b.gender===''?'selected':''}>未記載</option><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label>生年月日</label><input type="date" value="${b.birthday||''}" max="${todayStr}" onchange="App.updateBasic('birthday', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div></div></div>
-      <div class="grid-2"><div><label>現住所 郵便番号</label><input type="text" value="${b.postalCode||''}" onchange="App.updateBasic('postalCode', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div><label>現住所</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div>
-      <div class="grid-2"><div><label>電話番号</label><input type="text" value="${b.phone||''}" onchange="App.updateBasic('phone', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div><label>Email</label><input type="text" value="${b.email||''}" onchange="App.updateBasic('email', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div>
+      return topNotice + `<div class="card"><div class="card-title">JIS 基礎情報 (R3規格準拠)</div><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img" style="cursor:zoom-in;" onclick="App.viewImage('${b.photo}')">${isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">削除</button>`}` : `<div style="width:110px; height:140px; border:2px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:28px;">📷</div>${isReadOnly ? '' : `<button class="btn btn-primary btn-sm" onclick="App.uploadPhoto('basic')">写真貼付</button>`}`}</div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">氏名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)" ${isReadOnly ? 'disabled' : ''}><label style="font-size:12px; font-weight:700; color:var(--text-sub);">ふりがな</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)" ${isReadOnly ? 'disabled' : ''}><div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">性別 (任意)</label><select onchange="App.updateBasic('gender', this.value)" ${isReadOnly ? 'disabled' : ''}><option value="" ${b.gender===''?'selected':''}>未記載</option><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">生年月日</label><input type="date" value="${b.birthday||''}" max="${todayStr}" onchange="App.updateBasic('birthday', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div></div></div>
+      <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">現住所 郵便番号</label><input type="text" value="${b.postalCode||''}" onchange="App.updateBasic('postalCode', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">現住所</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div>
+      <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">電話番号</label><input type="text" value="${b.phone||''}" onchange="App.updateBasic('phone', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">Email</label><input type="text" value="${b.email||''}" onchange="App.updateBasic('email', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div>
       
-      <div style="margin-top:20px; border-top:1px dashed #cbd5e1; padding-top:20px;"></div>
-      <div class="grid-2"><div><label>連絡先 郵便番号 (現住所と異なる場合)</label><input type="text" value="${b.contactPostalCode||''}" onchange="App.updateBasic('contactPostalCode', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div><label>連絡先 住所</label><input type="text" value="${b.contactAddress||''}" onchange="App.updateBasic('contactAddress', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div>
-      <div class="grid-2"><div><label>連絡先 電話番号</label><input type="text" value="${b.contactPhone||''}" onchange="App.updateBasic('contactPhone', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div></div></div>
+      <div style="margin-top:20px; border-top:1px dashed var(--border); padding-top:20px;"></div>
+      <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">連絡先 郵便番号 (現住所と異なる場合)</label><input type="text" value="${b.contactPostalCode||''}" onchange="App.updateBasic('contactPostalCode', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">連絡先 住所</label><input type="text" value="${b.contactAddress||''}" onchange="App.updateBasic('contactAddress', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div>
+      <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">連絡先 電話番号</label><input type="text" value="${b.contactPhone||''}" onchange="App.updateBasic('contactPhone', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div></div></div>
       </div>`;
     }
 
@@ -1211,7 +1721,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         
         const renderP = (isTargetMyAuth) => {
             const filtered = (p.plans||[]).filter(i => (i.author === myId) === isTargetMyAuth);
-            if(filtered.length === 0) return '<p style="text-align:center; font-size:13px; color:#999;">データなし</p>';
+            if(filtered.length === 0) return '<p style="text-align:center; font-size:13px; color:#999; padding:20px;">データなし</p>';
             return filtered.map(i => {
                 const isOwner = i.author === myId; 
                 if(isOwner || i.visibility === 'visible') {
@@ -1223,7 +1733,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
                     const visibilityBtn = isOwner ? `<button class="btn ${i.visibility === 'visible' ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="event.stopPropagation(); App.toggleVisibility('plans','${i.id}')">${i.visibility === 'visible' ? '🔓 公開中' : '🔒 非公開'}</button>` : '';
                     const titleUI = isCompleted ? `<span class="badge-success">達成済</span> <strike style="color:#94a3b8;">${i.title}</strike>` : i.title;
 
-                    return `<div class="list-item"><div class="item-content" ${canEdit?`onclick="App.openModal('plans','${i.id}')"`:''}><div class="item-meta">${i.year}年 <span class="tag" style="background:#64748b;">${i.stage}</span></div><div class="item-title">${titleUI}</div><div class="item-desc">${i.desc||''}</div></div><div style="display:flex; flex-direction:column; gap:5px; min-width:80px;">${visibilityBtn}${compBtn}${canEdit?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('plans','${i.id}')">削除</button>`:''}</div></div>`;
+                    return `<div class="list-item"><div class="item-content" ${canEdit?`onclick="App.openModal('plans','${i.id}')"`:''}><div class="item-meta">${i.year}年 <span class="tag" style="background:#64748b;">${i.stage}</span></div><div class="item-title">${titleUI}</div><div class="item-desc">${i.desc||''}</div></div><div style="display:flex; flex-direction:column; gap:6px; min-width:80px;">${visibilityBtn}${compBtn}${canEdit?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('plans','${i.id}')">削除</button>`:''}</div></div>`;
                 }
                 return `<div class="list-item" style="align-items:center;"><div><span class="tag" style="background:#64748b;">${i.stage}</span> 🔒 内容非公開</div> <button class="btn btn-primary btn-sm" onclick="App.requestAccess('plans','${i.id}')">${i.visibility==='requested'?'要請中':'表示要請'}</button></div>`;
             }).join('');
@@ -1243,11 +1753,11 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         
         return topNotice + reqHtml + `<div class="grid-2">
             <div class="card" style="border-top:4px solid var(--plan-my);">
-                <h3>${myTitle} ${showAddMy ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button>` : ''}</h3>
+                <div class="card-title"><span>${myTitle}</span> ${showAddMy ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('plans')">+</button>` : ''}</div>
                 ${renderP(true)}
             </div>
             <div class="card" style="border-top:4px solid var(--plan-parent);">
-                <h3>${otherTitle}</h3>
+                <div class="card-title"><span>${otherTitle}</span></div>
                 ${renderP(false)}
             </div>
         </div>`;
@@ -1259,42 +1769,53 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         const cache = this.state.skillTreeCaches[pId]?.[this.state.skillTreeMode];
         const currentReport = cache ? cache.report : '';
 
-        return `<div class="card" style="border-top: 4px solid #8b5cf6;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="margin:0;">🌳 AI 動的スキルツリー</h3>
-                <span class="badge-success">Powered by Gemini</span>
+        return `<div class="card" style="border-top: 4px solid #6366f1;">
+            <div class="card-title">
+                <span>🌳 AI 動的スキルツリー</span>
+                <span class="badge-success">Powered by Gemini 2.0</span>
             </div>
-            <p style="font-size:13px; color:var(--text-sub); line-height:1.5;">AIが${p.name}さんの全てのデータ（年齢、性別、経歴、目標）を統合分析し、専用のスキルパスを描画します。<br>💡 <b>ヒント：</b>「琥珀色」のノードをクリックすると、目標リストに直接追加できます！</p>
+            <p style="font-size:13.5px; color:var(--text-sub); line-height:1.6; margin-top:-6px;">AIが${p.name}さんの全データ（年齢、性別、経歴、目標）を統合分析し、専用のスキルパスを描画します。<br>💡 <b>ヒント：</b>「琥珀色」のノードをクリックすると、目標リストに直接追加できます！</p>
             
-            <div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;">
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <div style="background:#f8fafc; padding:16px; border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:18px;">
+                <div style="display:flex; gap:10px; margin-bottom:12px;">
                     <button class="btn ${!isA?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='B'; App.render()">🔍 探索モード (AI提案)</button>
                     <button class="btn ${isA?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='A'; App.render()">🎯 逆算モード (目標指定)</button>
                 </div>
-                ${isA ? `<input type="text" placeholder="目標の職業を入力 (例: ITマネージャー、プロモデル)" value="${this.state.skillTreeTarget}" onchange="App.state.skillTreeTarget=this.value; if(App.state.skillTreeCaches['${pId}']) App.state.skillTreeCaches['${pId}']['A']=null; App.render();" style="margin-bottom:0;">` : '<div style="font-size:12px; color:#64748b; text-align:center; padding:10px;">💡 ヒント：AIが現在のプロフィールや環境に基づいて、将来のキャリアパスの可能性を提案します。</div>'}
+                ${isA ? `<input type="text" placeholder="目標の職業を入力 (例: ITマネージャー、プロモデル)" value="${this.state.skillTreeTarget}" onchange="App.state.skillTreeTarget=this.value; if(App.state.skillTreeCaches['${pId}']) App.state.skillTreeCaches['${pId}']['A']=null; App.render();" style="margin-bottom:0;">` : '<div style="font-size:12.5px; color:#64748b; text-align:center; padding:6px;">💡 ヒント：AIが現在のプロフィールや環境に基づいて、将来有望なキャリアパスを提案します。</div>'}
             </div>
 
-            <button class="btn btn-primary btn-full" style="padding:12px; font-size:16px; margin-bottom:20px;" onclick="App.generateSkillTree()" ${this.state.skillTreeGenerating?'disabled':''}>
+            <button class="btn btn-primary btn-full" style="padding:14px; font-size:16px; margin-bottom:20px;" onclick="App.generateSkillTree()" ${this.state.skillTreeGenerating?'disabled':''}>
                 ${this.state.skillTreeGenerating?'AIが全データを分析中...':'✨ スキルツリーを生成・更新'}
             </button>
 
-            <div id="skill-network-container" style="${this.state.skillTreeGenerating?'opacity:0.3;':''} height: 500px; background: #fff; border: 1px solid var(--border); border-radius: 8px;">
-                ${cache ? '' : '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#cbd5e1; font-size:14px;">上のボタンをクリックしてAIを起動してください</div>'}
+            <!-- Skill Tree Canvas Container with Control Bar -->
+            <div id="skill-network-container" style="${this.state.skillTreeGenerating?'opacity:0.3;':''}">
+                <div class="canvas-control-bar">
+                  <button class="canvas-ctrl-btn" title="拡大" onclick="App.zoomSkillTree(1.2)">➕</button>
+                  <button class="canvas-ctrl-btn" title="縮小" onclick="App.zoomSkillTree(0.8)">➖</button>
+                  <button class="canvas-ctrl-btn" title="全体表示" onclick="App.resetSkillTree()">🎯</button>
+                  <button class="canvas-ctrl-btn" title="物理固定" onclick="App.togglePhysics()">⏸️</button>
+                </div>
+                ${cache ? '' : '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:14px; font-weight:500;">上のボタンをクリックしてAIを起動してください</div>'}
             </div>
 
             ${currentReport ? `
-            <div style="background:#fffbeb; font-size:13px; border:1px solid #fde68a; padding:15px; border-radius:8px; margin-top:15px; white-space:pre-wrap;">
+            <div style="background:#fffbeb; font-size:13.5px; border:1px solid #fde68a; padding:18px; border-radius:var(--radius-sm); margin-top:16px; line-height:1.6; white-space:pre-wrap; color:#78350f;">
                 ${currentReport}
             </div>` : ''}
 
-            <div style="margin-top:20px; font-size:11px; display:flex; flex-direction:column; gap:10px;">
-                <div>🔑 API Key (ローカル保存のみ): <input type="password" value="${this.getGeminiKey()}" onchange="App.setGeminiKey(this.value)" placeholder="AIzaSy..." style="width:200px; padding:4px;"></div>
-                <div>🤖 AIモデル: 
-                    <select onchange="App.setGeminiModel(this.value)" style="width:200px; padding:4px;">
-                        <option value="gemini-2.0-flash" ${this.getGeminiModel()==='gemini-2.0-flash'?'selected':''}>gemini-2.0-flash (最新・最速・推奨)</option>
-                        <option value="gemini-1.5-flash" ${this.getGeminiModel()==='gemini-1.5-flash'?'selected':''}>gemini-1.5-flash</option>
-                        <option value="gemini-1.5-pro" ${this.getGeminiModel()==='gemini-1.5-pro'?'selected':''}>gemini-1.5-pro</option>
-                    </select>
+            <div style="margin-top:24px; font-size:12px; display:flex; flex-direction:column; gap:12px; border-top:1px dashed var(--border); padding-top:16px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-weight:700;">🔑 API Key (本機保存):</span>
+                  <input type="password" value="${this.getGeminiKey()}" onchange="App.setGeminiKey(this.value)" placeholder="AIzaSy..." style="max-width:240px; margin-bottom:0; padding:6px 10px;">
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-weight:700;">🤖 AIモデル:</span>
+                  <select onchange="App.setGeminiModel(this.value)" style="max-width:240px; margin-bottom:0; padding:6px 10px;">
+                      <option value="gemini-2.0-flash" ${this.getGeminiModel()==='gemini-2.0-flash'?'selected':''}>gemini-2.0-flash (最新・最速)</option>
+                      <option value="gemini-1.5-flash" ${this.getGeminiModel()==='gemini-1.5-flash'?'selected':''}>gemini-1.5-flash</option>
+                      <option value="gemini-1.5-pro" ${this.getGeminiModel()==='gemini-1.5-pro'?'selected':''}>gemini-1.5-pro</option>
+                  </select>
                 </div>
             </div>
         </div>`;
@@ -1305,40 +1826,45 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
       const maxRowsNotice = (hCount > 20) ? `<div style="color:var(--danger); font-size:11px; margin-top:4px;">⚠️ 学歴・職歴が多いため（${hCount}件）、JIS印刷時に22行を超えた分は省略されます。チェックを外して調整してください。</div>` : '';
 
       return `
-        <div class="card" style="border-top:4px solid var(--primary);"><h3>🤝 家族共有・リアルタイム共同編集</h3>
-          <p style="font-size:12px; color:var(--text-sub);">共有コードを発行し、他の家族のGoogleアカウントへデータを転送・共有できます。</p>
-          <div class="grid-2" style="margin-bottom:15px;">
-            <select id="share-profile-select"><option value="${p.id}">${p.name} のデータを共有</option></select>
+        <div class="card" style="border-top:4px solid var(--primary);">
+          <div class="card-title"><span>🤝 家族共有・リアルタイム共同編集</span></div>
+          <p style="font-size:12.5px; color:var(--text-sub);">共有コードを発行し、他の家族のGoogleアカウントへデータを転送・共有できます。</p>
+          <div class="grid-2" style="margin-bottom:16px;">
+            <select id="share-profile-select" style="margin-bottom:0;"><option value="${p.id}">${p.name} のデータを共有</option></select>
             <button class="btn btn-primary" onclick="App.generateShareCode()">共有コードを発行 (Push)</button>
           </div>
-          <div style="border-top:1px dashed #cbd5e1; padding-top:15px;" class="grid-2">
-            <input type="text" id="import-share-code" placeholder="共有コードを入力 (例: LR-ABC123)">
+          <div style="border-top:1px dashed #cbd5e1; padding-top:16px;" class="grid-2">
+            <input type="text" id="import-share-code" placeholder="共有コードを入力 (例: LR-ABC123)" style="margin-bottom:0;">
             <button class="btn btn-success" onclick="App.importSharedProfile(document.getElementById('import-share-code').value)">データを受け取る (Pull)</button>
           </div>
         </div>
-        <div class="card"><h3>🔐 ${p.name} 専用パスワード設定</h3>
-          <p style="font-size:12px; color:var(--text-sub);">このプロフィール専用のパスワードです。空欄にすると認証なしでログインできます。</p>
-          <div class="grid-2"><input type="password" id="profile-pwd" placeholder="新パスワードを入力" value="${p.password||''}">
+
+        <div class="card">
+          <div class="card-title"><span>🔐 ${p.name} 専用パスワード設定</span></div>
+          <p style="font-size:12.5px; color:var(--text-sub);">このプロフィール専用のパスワードです。空欄にすると認証なしでログインできます。</p>
+          <div class="grid-2"><input type="password" id="profile-pwd" placeholder="新パスワードを入力" value="${p.password||''}" style="margin-bottom:0;">
           <button class="btn btn-primary" onclick="const v=document.getElementById('profile-pwd').value; App.getProfile().password=v; App.saveData(); App.showAlert('パスワードを更新しました。');">パスワードを更新</button></div>
         </div>
         
-        <div class="card" style="background:#e0f2fe;"><h3>☁️ Google クラウド同期</h3>
+        <div class="card" style="background:#f0fdfa; border-color:#ccfbf1;">
+          <div class="card-title"><span style="color:#0f766e;">☁️ Google クラウド同期</span></div>
           ${window.CloudSync?.isLoggedIn && window.CloudSync.user ? 
-            `<div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:10px; border-radius:8px; border:1px solid #bae6fd; margin-bottom:15px;">
+            `<div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:12px 16px; border-radius:var(--radius-sm); border:1px solid #99f6e4; margin-bottom:12px;">
                <div style="display:flex; align-items:center; gap:10px;">
-                 <img src="${window.CloudSync.user.photoURL}" style="width:30px; height:30px; border-radius:50%;">
-                 <span style="font-size:13px; font-weight:bold; color:#0369a1;">${window.CloudSync.user.displayName}</span>
+                 <img src="${window.CloudSync.user.photoURL}" style="width:32px; height:32px; border-radius:50%;">
+                 <span style="font-size:13.5px; font-weight:700; color:#0f766e;">${window.CloudSync.user.displayName}</span>
                </div>
                <button class="btn btn-secondary btn-sm" onclick="window.CloudSync.logout()">連携解除</button>
              </div>
-             <p style="font-size:12px; color:var(--text-sub);">データは自動的に同期されています。</p>` 
+             <p style="font-size:12px; color:var(--text-sub); margin:0;">データはリアルタイムで安全に自動同期されています。</p>` 
              : 
              `<div id="google-auth-area" style="margin-bottom:10px;"><button class="btn btn-google btn-full" onclick="window.CloudSync.login()"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" style="width:16px; margin-right:8px;"> アカウントを連携する</button></div>`
           }
         </div>
 
-        <div class="card" style="background:#f8fafc;"><h3>💾 ローカルバックアップ (ゲスト用)</h3>
-          <p style="font-size:12px; color:var(--text-sub);">手動でローカルに保存・復元できます。</p>
+        <div class="card">
+          <div class="card-title"><span>💾 ローカルバックアップ (ゲスト用)</span></div>
+          <p style="font-size:12.5px; color:var(--text-sub);">手動でローカルに保存・復元できます。</p>
           <div class="grid-2">
             <button class="btn btn-secondary" onclick="App.exportLocalData()">エクスポート (.json)</button>
             <button class="btn btn-secondary" onclick="document.getElementById('inp-import-json').click()">インポート (.json)</button>
@@ -1346,34 +1872,35 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
           </div>
         </div>
 
-        <div class="card" style="background:#fffbeb;"><h3>📄 JIS 履歴書出力 (R3規格準拠)</h3>
-          <p style="font-size:12px; color:var(--text-sub);">厚労省準拠の最新R3規格に準拠した完璧なA4見開き(2ページ)形式で出力します。※通勤時間や扶養家族などの古い項目は含まれません。</p>
-          <div class="grid-2" style="margin-bottom:15px;">
-              <div><label style="font-size:12px; font-weight:bold;">年号表記</label><select onchange="App.updateSetting('printEra', this.value)"><option value="western" ${this.data.settings.printEra==='western'?'selected':''}>西暦 (2026年)</option><option value="japanese" ${this.data.settings.printEra==='japanese'?'selected':''}>和暦 (令和8年)</option></select></div>
+        <div class="card" style="background:#fffbeb; border-color:#fde68a;">
+          <div class="card-title"><span style="color:#b45309;">📄 JIS 履歴書出力 (R3規格準拠)</span></div>
+          <p style="font-size:12.5px; color:#78350f;">厚労省準拠の最新R3規格に準拠した完璧なA4見開き(2ページ)形式で出力します。</p>
+          <div class="grid-2" style="margin-bottom:16px;">
+              <div><label style="font-size:12px; font-weight:700;">年号表記</label><select onchange="App.updateSetting('printEra', this.value)" style="margin-bottom:0;"><option value="western" ${this.data.settings.printEra==='western'?'selected':''}>西暦 (2026年)</option><option value="japanese" ${this.data.settings.printEra==='japanese'?'selected':''}>和暦 (令和8年)</option></select></div>
               <div></div>
           </div>
           <div class="grid-2">
-              <div><label style="font-size:12px; font-weight:bold;">学歴・職歴の出力選択</label><div class="export-check-list" id="export-history-list">${p.history.map(i=>`<div class="export-check-item"><input type="checkbox" id="chk_h_${i.id}" value="${i.id}" checked><label for="chk_h_${i.id}">${i.year}年: ${i.title}</label></div>`).join('') || '<div style="font-size:12px; color:#999;">データなし</div>'}</div>${maxRowsNotice}</div>
-              <div><label style="font-size:12px; font-weight:bold;">免許・資格の出力選択</label><div class="export-check-list" id="export-skills-list">${p.skills.map(i=>`<div class="export-check-item"><input type="checkbox" id="chk_s_${i.id}" value="${i.id}" checked><label for="chk_s_${i.id}">${i.year}年: ${i.title}</label></div>`).join('') || '<div style="font-size:12px; color:#999;">データなし</div>'}</div></div>
+              <div><label style="font-size:12px; font-weight:700;">学歴・職歴の出力選択</label><div class="export-check-list" id="export-history-list">${p.history.map(i=>`<div class="export-check-item"><input type="checkbox" id="chk_h_${i.id}" value="${i.id}" checked><label for="chk_h_${i.id}">${i.year}年: ${i.title}</label></div>`).join('') || '<div style="font-size:12px; color:#999;">データなし</div>'}</div>${maxRowsNotice}</div>
+              <div><label style="font-size:12px; font-weight:700;">免許・資格の出力選択</label><div class="export-check-list" id="export-skills-list">${p.skills.map(i=>`<div class="export-check-item"><input type="checkbox" id="chk_s_${i.id}" value="${i.id}" checked><label for="chk_s_${i.id}">${i.year}年: ${i.title}</label></div>`).join('') || '<div style="font-size:12px; color:#999;">データなし</div>'}</div></div>
           </div>
-          <div style="margin-top:15px; border-top:1px dashed #cbd5e1; padding-top:15px;"></div>
-          <label style="font-size:12px; font-weight:bold;">本人希望記入欄 (特に給料・職種・勤務時間・勤務地・その他)</label>
+          <div style="margin-top:16px; border-top:1px dashed #fde68a; padding-top:16px;"></div>
+          <label style="font-size:12px; font-weight:700;">本人希望記入欄 (特に給料・職種・勤務時間・勤務地・その他)</label>
           <textarea rows="3" onchange="App.updateBasic('desiredConditions', this.value)" placeholder="特になし" ${isReadOnly ? 'disabled' : ''}>${b.desiredConditions||''}</textarea>
-          <button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="App.triggerPrintMode()">🖨️ JIS履歴書を作成</button>
+          <button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="App.triggerPrintMode()">🖨️ JIS履歴書を作成・印刷</button>
         </div>
-        ${p.id !== this.data.settings.mainProfileId ? `<div class="card" style="border-color:var(--danger); background:#fff1f2;"><h3 style="color:var(--danger);">プロフィールの削除</h3><p style="font-size:12px;">この端末から「${p.name}」のデータを削除します。</p><button class="btn btn-danger btn-full" onclick="App.deleteProfile('${p.id}')">🗑️ このプロフィールを削除</button></div>` : ''}
-        <div class="card" style="font-size:11px; color:#999;"><h3 style="margin:0;">免責事項</h3><p>本アプリの利用による損害について開発者は一切責任を負いません。定期的なバックアップを推奨します。<br>Producer: M.K(TW)</p></div>`;
+        ${p.id !== this.data.settings.mainProfileId ? `<div class="card" style="border-color:var(--danger); background:#fff1f2;"><div class="card-title"><span style="color:var(--danger);">プロフィールの削除</span></div><p style="font-size:12px;">この端末から「${p.name}」のデータを削除します。</p><button class="btn btn-danger btn-full" onclick="App.deleteProfile('${p.id}')">🗑️ このプロフィールを削除</button></div>` : ''}
+        <div class="card" style="font-size:11px; color:#94a3b8; text-align:center;"><p style="margin:0;">人生履歴書 V3.0 Pro PWA Edition<br>Producer: M.K(TW)</p></div>`;
     }
   },
 
   buildListUI(cat, title, isReadOnly) {
     const items = this.getProfile()[cat] || [];
-    let html = `<div class="card"><h3>${title} ${isReadOnly ? '' : `<button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button>`}</h3>`;
-    if(items.length === 0) html += `<p style="font-size:13px; color:#999; text-align:center;">データがありません</p>`;
+    let html = `<div class="card"><div class="card-title"><span>${title}</span> ${isReadOnly ? '' : `<button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button>`}</div>`;
+    if(items.length === 0) html += `<p style="font-size:13.5px; color:#94a3b8; text-align:center; padding:20px;">データがありません</p>`;
     items.forEach(i => {
-      html += `<div class="list-item"><div class="item-content" ${isReadOnly ? '' : `onclick="App.openModal('${cat}', '${i.id}')"`}><div class="item-meta">${i.year||'?'}年 ${i.stage||''} ${i.eduStatus?`[${i.eduStatus}]`:''} ${i.dim?`[${i.dim}]`:''}</div><div class="item-title">${i.title}</div><div class="item-desc">${i.desc||''}</div></div><div class="photo-wrapper" style="position:relative;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')">${isReadOnly ? '' : `<button class="btn btn-danger btn-sm" style="position:absolute; top:-8px; right:-8px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>`}` : (isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`)}</div>${isReadOnly ? '' : `<div style="display:flex; flex-direction:column; gap:5px; min-width:60px;"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button></div>`}</div>`;
+      html += `<div class="list-item"><div class="item-content" ${isReadOnly ? '' : `onclick="App.openModal('${cat}', '${i.id}')"`}><div class="item-meta">${i.year||'?'}年 ${i.stage||''} ${i.eduStatus?`[${i.eduStatus}]`:''} ${i.dim?`[${i.dim}]`:''}</div><div class="item-title">${i.title}</div><div class="item-desc">${i.desc||''}</div></div><div class="photo-wrapper" style="position:relative;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')">${isReadOnly ? '' : `<button class="btn btn-danger btn-sm" style="position:absolute; top:-6px; right:-6px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>`}` : (isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`)}</div>${isReadOnly ? '' : `<div style="display:flex; flex-direction:column; gap:6px; min-width:60px;"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button></div>`}</div>`;
     });
-    if(cat === 'skills') html += `<textarea rows="3" onchange="App.updateBasic('motivation', this.value)" placeholder="志望の動機、特技、アピールポイントなど" ${isReadOnly ? 'disabled' : ''}>${this.getProfile().basic.motivation||''}</textarea>`;
+    if(cat === 'skills') html += `<div style="margin-top:16px;"><label style="font-size:12px; font-weight:700; color:var(--text-sub);">志望の動機、特技、アピールポイントなど</label><textarea rows="3" onchange="App.updateBasic('motivation', this.value)" placeholder="自己PRや志望動機などを入力" ${isReadOnly ? 'disabled' : ''}>${this.getProfile().basic.motivation||''}</textarea></div>`;
     return html + `</div>`;
   },
 
@@ -1388,18 +1915,18 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         reqHtml = `<div class="card" style="background:#fff7ed; border-color:#fdba74;"><h3>承認待ちリクエスト</h3>${requests.map(r => `<div class="list-item"><div>${r.date}: ${r.title}</div><button class="btn btn-success btn-sm" onclick="App.grantAccess('${cat}', '${r.id}')">公開する</button></div>`).join('')}</div>`;
     }
 
-    let html = `<div class="card" style="border-top:4px solid var(--diary-color);"><h3>${title} ${isOwnerView ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button>` : ''}</h3>`;
+    let html = `<div class="card" style="border-top:4px solid var(--diary-color);"><div class="card-title"><span>${title}</span> ${isOwnerView ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button>` : ''}</div>`;
     
     const filtered = [...(p[cat] || [])].sort((a,b) => (b.date > a.date ? 1 : -1));
-    if (filtered.length === 0) html += `<p style="text-align:center; font-size:13px; color:#999;">記録がありません</p>`;
+    if (filtered.length === 0) html += `<p style="text-align:center; font-size:13.5px; color:#94a3b8; padding:20px;">記録がありません</p>`;
 
     filtered.forEach(i => {
       if (isOwnerView || i.visibility === 'visible') {
           const canEdit = isOwnerView; 
           const visibilityBtn = isOwnerView ? `<button class="btn ${i.visibility === 'visible' ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="event.stopPropagation(); App.toggleVisibility('${cat}','${i.id}')">${i.visibility === 'visible' ? '🔓 公開中' : '🔒 非公開'}</button>` : '';
-          const actionBtns = canEdit ? `<div style="display:flex; flex-direction:column; gap:5px; min-width:80px;">${visibilityBtn}<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button></div>` : '';
+          const actionBtns = canEdit ? `<div style="display:flex; flex-direction:column; gap:6px; min-width:80px;">${visibilityBtn}<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button></div>` : '';
 
-          html += `<div class="list-item"><div class="item-content" ${canEdit ? `onclick="App.openModal('${cat}', '${i.id}')"` : ''}><div class="item-meta" style="color:var(--diary-color); font-weight:bold;">${i.date}</div><div class="item-title" style="font-weight:normal; font-size:14px; white-space:pre-wrap;">${i.title}</div></div><div class="photo-wrapper" style="position:relative; margin-right:10px;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')">${canEdit ? `<button class="btn btn-danger btn-sm" style="position:absolute; top:-8px; right:-8px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>`:''}` : (canEdit ? `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`:'')}</div>${actionBtns}</div>`;
+          html += `<div class="list-item"><div class="item-content" ${canEdit ? `onclick="App.openModal('${cat}', '${i.id}')"` : ''}><div class="item-meta" style="color:var(--diary-color); font-weight:700;">${i.date}</div><div class="item-title" style="font-weight:500; font-size:15px; white-space:pre-wrap;">${i.title}</div></div><div class="photo-wrapper" style="position:relative; margin-right:10px;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')">${canEdit ? `<button class="btn btn-danger btn-sm" style="position:absolute; top:-6px; right:-6px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>`:''}` : (canEdit ? `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`:'')}</div>${actionBtns}</div>`;
       } else {
           html += `<div class="list-item" style="align-items:center;"><div><span class="tag" style="background:#64748b;">${i.date}</span> 🔒 内容非公開</div> <button class="btn btn-primary btn-sm" onclick="App.requestAccess('${cat}', '${i.id}')">${i.visibility==='requested'?'要請中':'閲覧をリクエスト'}</button></div>`;
       }
@@ -1414,25 +1941,25 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     
     if (ctx.category === 'diary') {
         const todayStr = this.getLocalTodayString();
-        return `<div class="modal-overlay overlay"><div class="modal-box"><h3>${isNew?'メモ・日記を追加':'編集'}</h3>
-        <label>日付</label><input type="date" id="mod-date" value="${item.date || todayStr}">
-        <label>公開設定</label><select id="mod-visibility" style="margin-bottom:12px;"><option value="hidden" ${item.visibility==='hidden'?'selected':''}>🔒 非公開 (自分のみ)</option><option value="visible" ${item.visibility==='visible'||isNew?'selected':''}>🔓 公開 (共有相手も閲覧可)</option></select>
-        <label>内容 (格言・一言など)</label><textarea id="mod-title" rows="4" placeholder="今日事今日畢">${item.title||''}</textarea>
-        <div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
+        return `<div class="modal-overlay overlay"><div class="modal-box"><h3 style="font-weight:700; margin-top:0;">${isNew?'📝 メモ・日記を追加':'編集'}</h3>
+        <label style="font-size:12px; font-weight:700; color:var(--text-sub);">日付</label><input type="date" id="mod-date" value="${item.date || todayStr}">
+        <label style="font-size:12px; font-weight:700; color:var(--text-sub);">公開設定</label><select id="mod-visibility"><option value="hidden" ${item.visibility==='hidden'?'selected':''}>🔒 非公開 (自分のみ)</option><option value="visible" ${item.visibility==='visible'||isNew?'selected':''}>🔓 公開 (共有相手も閲覧可)</option></select>
+        <label style="font-size:12px; font-weight:700; color:var(--text-sub);">内容 (格言・一言など)</label><textarea id="mod-title" rows="4" placeholder="今日事今日畢">${item.title||''}</textarea>
+        <div class="grid-2" style="margin-top:10px;"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
     }
 
     const isEdu = ctx.category === 'history'; const isSkill = ctx.category === 'skills'; const isPlan = ctx.category === 'plans';
     const stageOptions = STAGES.map(s => `<option value="${s}" ${item.stage===s?'selected':''}>${s}</option>`).join('');
     const dimOptions = SKILL_DIMS.map(s => `<option value="${s}" ${item.dim===s?'selected':''}>${s}</option>`).join('');
     
-    return `<div class="modal-overlay overlay"><div class="modal-box"><h3>${isNew?'新規追加':'編集'}</h3>
-    <label>ライフステージ</label><select id="mod-stage">${stageOptions}</select>
-    ${isEdu ? `<label>区分・状態 (学歴・職歴)</label><select id="mod-edu-status"><optgroup label="学歴"><option value="入学" ${item.eduStatus==='入学'?'selected':''}>入学</option><option value="卒業" ${item.eduStatus==='卒業'?'selected':''}>卒業</option><option value="卒業見込み" ${item.eduStatus==='卒業見込み'?'selected':''}>卒業見込み</option><option value="中退" ${item.eduStatus==='中退'?'selected':''}>中退</option></optgroup><optgroup label="職歴"><option value="入社" ${item.eduStatus==='入社'?'selected':''}>入社</option><option value="退社" ${item.eduStatus==='退社'?'selected':''}>退社</option><option value="現在に至る" ${item.eduStatus==='現在に至る'?'selected':''}>現在に至る</option><option value="" ${!item.eduStatus?'selected':''}>その他 (状態なし)</option></optgroup></select>` : ''}
-    ${isSkill ? `<label>能力カテゴリー (レーダーチャート用)</label><select id="mod-skill-dim">${dimOptions}</select>` : ''}
-    ${isPlan ? `<label>公開設定</label><select id="mod-visibility" style="margin-bottom:12px;"><option value="hidden" ${item.visibility==='hidden'?'selected':''}>🔒 非公開 (自分のみ)</option><option value="visible" ${item.visibility==='visible'||isNew?'selected':''}>🔓 公開 (共有相手も閲覧可)</option></select>` : ''}
-    <div class="grid-2"><div><label>年 (西暦)</label><input type="number" id="mod-year" value="${item.year||''}" placeholder="2026" max="2100"></div><div><label>月</label><input type="number" id="mod-month" value="${item.month||''}" placeholder="4" min="1" max="12"></div></div>
-    <label>内容 / タイトル</label><input type="text" id="mod-title" value="${item.title||''}" placeholder="入力してください"><label>詳細・備考</label><textarea id="mod-desc" rows="4">${item.desc||''}</textarea>
-    <div class="grid-2"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
+    return `<div class="modal-overlay overlay"><div class="modal-box"><h3 style="font-weight:700; margin-top:0;">${isNew?'新規追加':'編集'}</h3>
+    <label style="font-size:12px; font-weight:700; color:var(--text-sub);">ライフステージ</label><select id="mod-stage">${stageOptions}</select>
+    ${isEdu ? `<label style="font-size:12px; font-weight:700; color:var(--text-sub);">区分・状態 (学歴・職歴)</label><select id="mod-edu-status"><optgroup label="学歴"><option value="入学" ${item.eduStatus==='入学'?'selected':''}>入学</option><option value="卒業" ${item.eduStatus==='卒業'?'selected':''}>卒業</option><option value="卒業見込み" ${item.eduStatus==='卒業見込み'?'selected':''}>卒業見込み</option><option value="中退" ${item.eduStatus==='中退'?'selected':''}>中退</option></optgroup><optgroup label="職歴"><option value="入社" ${item.eduStatus==='入社'?'selected':''}>入社</option><option value="退社" ${item.eduStatus==='退社'?'selected':''}>退社</option><option value="現在に至る" ${item.eduStatus==='現在に至る'?'selected':''}>現在に至る</option><option value="" ${!item.eduStatus?'selected':''}>その他 (状態なし)</option></optgroup></select>` : ''}
+    ${isSkill ? `<label style="font-size:12px; font-weight:700; color:var(--text-sub);">能力カテゴリー (レーダーチャート用)</label><select id="mod-skill-dim">${dimOptions}</select>` : ''}
+    ${isPlan ? `<label style="font-size:12px; font-weight:700; color:var(--text-sub);">公開設定</label><select id="mod-visibility"><option value="hidden" ${item.visibility==='hidden'?'selected':''}>🔒 非公開 (自分のみ)</option><option value="visible" ${item.visibility==='visible'||isNew?'selected':''}>🔓 公開 (共有相手も閲覧可)</option></select>` : ''}
+    <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">年 (西暦)</label><input type="number" id="mod-year" value="${item.year||''}" placeholder="2026" max="2100"></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">月</label><input type="number" id="mod-month" value="${item.month||''}" placeholder="4" min="1" max="12"></div></div>
+    <label style="font-size:12px; font-weight:700; color:var(--text-sub);">内容 / タイトル</label><input type="text" id="mod-title" value="${item.title||''}" placeholder="入力してください"><label style="font-size:12px; font-weight:700; color:var(--text-sub);">詳細・備考</label><textarea id="mod-desc" rows="4">${item.desc||''}</textarea>
+    <div class="grid-2" style="margin-top:10px;"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
   },
 
   triggerPrintMode() {
