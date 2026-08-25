@@ -1205,7 +1205,7 @@ const App = {
   getGeminiKey() { return localStorage.getItem('LIFE_RESUME_GEMINI_KEY') || ''; },
   setGeminiKey(key) { localStorage.setItem('LIFE_RESUME_GEMINI_KEY', key.trim()); this.showAlert("API Key を保存しました！"); },
 
-  getGeminiModel() { return localStorage.getItem('LIFE_RESUME_GEMINI_MODEL') || 'gemini-2.0-flash'; },
+  getGeminiModel() { return localStorage.getItem('LIFE_RESUME_GEMINI_MODEL') || 'gemini-3.6-flash'; },
   setGeminiModel(model) { localStorage.setItem('LIFE_RESUME_GEMINI_MODEL', model); this.render(); },
 
   async generateSkillTree() {
@@ -1325,7 +1325,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
           console.error("Skill Tree Generation Error:", e);
           this.state.skillTreeGenerating = false; 
           this.render(); 
-          this.showAlert("生成失敗，原因：\n" + e.message + "\n\n(ヒント：エラーが発生した場合は、下のAIモデルをgemini-2.0-flashに変更してみてください)"); 
+          this.showAlert("生成失敗，原因：\n" + e.message + "\n\n(ヒント：エラーが発生した場合は、下のAIモデルを gemini-3.6-flash または gemini-3.7-flash に変更してみてください)"); 
       }
   },
 
@@ -1883,7 +1883,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         return `<div class="card" style="border-top: 4px solid #6366f1;">
             <div class="card-title">
                 <span>${this.t('skilltree')}</span>
-                <span class="badge-success">Powered by Gemini 2.0</span>
+                <span class="badge-success">Powered by Gemini AI</span>
             </div>
             <p style="font-size:13.5px; color:var(--text-sub); line-height:1.6; margin-top:-6px;">${(this.data.settings.lang==='zh'?'AI 將整合分析您所有的資料（年齡、性別、經歷、目標），繪製出專屬的技能成長拓撲路徑。<br>💡 <b>提示：</b>點擊「琥珀色」節點，可直接將該技能加入目標清單！':'AIが全データ（年齢、性別、経歴、目標）を統合分析し、専用のスキルパスを描画します。<br>💡 <b>ヒント：</b>「琥珀色」のノードをクリックすると、目標リストに直接追加できます！')}</p>
             
@@ -1923,8 +1923,10 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
                 <div style="display:flex; align-items:center; gap:8px;">
                   <span style="font-weight:700;">🤖 AIモデル:</span>
                   <select onchange="App.setGeminiModel(this.value)" style="max-width:240px; margin-bottom:0; padding:6px 10px;">
-                      <option value="gemini-2.0-flash" ${this.getGeminiModel()==='gemini-2.0-flash'?'selected':''}>gemini-2.0-flash (最新・最速)</option>
-                      <option value="gemini-1.5-flash" ${this.getGeminiModel()==='gemini-1.5-flash'?'selected':''}>gemini-1.5-flash</option>
+                      <option value="gemini-3.6-flash" ${this.getGeminiModel()==='gemini-3.6-flash'?'selected':''}>gemini-3.6-flash (最新・最速・推奨)</option>
+                      <option value="gemini-3.7-flash" ${this.getGeminiModel()==='gemini-3.7-flash'?'selected':''}>gemini-3.7-flash (最新・高精度)</option>
+                      <option value="gemini-2.5-flash" ${this.getGeminiModel()==='gemini-2.5-flash'?'selected':''}>gemini-2.5-flash</option>
+                      <option value="gemini-1.5-flash" ${this.getGeminiModel()==='gemini-1.5-flash'?'selected':''}>gemini-1.5-flash (安定版)</option>
                       <option value="gemini-1.5-pro" ${this.getGeminiModel()==='gemini-1.5-pro'?'selected':''}>gemini-1.5-pro</option>
                   </select>
                 </div>
