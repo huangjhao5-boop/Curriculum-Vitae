@@ -16,12 +16,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="人生履歴書">
   <meta name="theme-color" content="#0f766e">
-  <title>人生履歴書 V3.0 (Pro PWA Edition)</title>
+  <title>人生履歴書 / 人生履歷書 V3.0 (Pro PWA Edition)</title>
 
-  <!-- Google Fonts: Inter & Noto Sans JP -->
+  <!-- Google Fonts: Inter & Noto Sans JP & TC -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 
   <!-- Chart.js for Radar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -46,9 +46,9 @@
       --diary-color: #3b82f6;
       
       --bg-color: #f8fafc;
-      --card-bg: rgba(255, 255, 255, 0.95);
-      --card-border: rgba(226, 232, 240, 0.8);
-      --glass-bg: rgba(255, 255, 255, 0.82);
+      --card-bg: rgba(255, 255, 255, 0.96);
+      --card-border: rgba(226, 232, 240, 0.85);
+      --glass-bg: rgba(255, 255, 255, 0.85);
       
       --text-main: #1e293b;
       --text-sub: #64748b;
@@ -62,7 +62,6 @@
       --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
       --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
       --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-      --shadow-glow: 0 0 20px rgba(15, 118, 110, 0.2);
       
       --radius-sm: 8px;
       --radius: 14px;
@@ -71,7 +70,7 @@
     }
 
     body {
-      font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Inter', 'Noto Sans TC', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
       background-color: var(--bg-color);
       color: var(--text-main);
       margin: 0;
@@ -96,9 +95,6 @@
       margin-bottom: 20px;
       box-shadow: var(--shadow-md);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .card:hover {
-      box-shadow: var(--shadow-lg);
     }
     .card-title {
       font-size: 18px;
@@ -126,7 +122,7 @@
     }
     .stat-box:hover { transform: translateY(-2px); border-color: var(--primary-light); }
     .stat-val { font-size: 24px; font-weight: 800; color: var(--primary); letter-spacing: -0.02em; }
-    .stat-label { font-size: 12px; font-weight: 500; color: var(--text-sub); margin-top: 4px; }
+    .stat-label { font-size: 12px; font-weight: 600; color: var(--text-sub); margin-top: 4px; }
     .chart-container { position: relative; height: 280px; width: 100%; margin-bottom: 10px; }
 
     /* Buttons */
@@ -153,6 +149,7 @@
     .btn-danger:hover { background: #fecaca; }
     .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
     .btn-google { background: #ffffff; color: #334155; border: 1px solid #cbd5e1; }
+    .btn-lang { background: #ffffff; color: var(--primary-dark); border: 1px solid var(--border); font-size: 12px; padding: 6px 12px; border-radius: var(--radius-full); font-weight: 700; }
     .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
     .btn-full { width: 100%; }
     .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; }
@@ -220,28 +217,30 @@
     .sync-dot.syncing { background: #8b5cf6; animation: blink 1s infinite; box-shadow: 0 0 8px #8b5cf6; }
     @keyframes blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } }
 
-    /* Modern Segmented Pill Tabs */
+    /* Modern Segmented Pill Tabs (完全解決切邊問題) */
     .tabs-wrapper {
       display: flex;
-      gap: 6px;
+      gap: 8px;
       overflow-x: auto;
-      margin-bottom: 22px;
-      padding: 6px;
+      margin-bottom: 24px;
+      padding: 8px 16px 8px 8px;
       background: #f1f5f9;
       border-radius: var(--radius);
       border: 1px solid var(--border);
       -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
+      scrollbar-width: thin;
+      scroll-snap-type: x proximity;
     }
-    .tabs-wrapper::-webkit-scrollbar { display: none; }
     .tab {
-      padding: 10px 16px;
+      padding: 10px 18px;
       cursor: pointer;
       font-size: 13.5px;
       font-weight: 600;
       color: var(--text-sub);
       border-radius: var(--radius-sm);
       white-space: nowrap;
+      flex-shrink: 0;
+      scroll-snap-align: start;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       align-items: center;
@@ -251,7 +250,7 @@
     .tab.active {
       color: var(--primary-dark);
       background: #ffffff;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       font-weight: 700;
     }
 
@@ -275,6 +274,7 @@
       color: var(--text-sub);
       border: 1px solid var(--border);
       white-space: nowrap;
+      flex-shrink: 0;
       transition: all 0.15s;
     }
     .filter-chip.active {
@@ -449,7 +449,7 @@
 
     @media screen and (max-width: 680px) {
       .container { padding: 12px; }
-      .header { padding: 10px 16px; }
+      .header { padding: 10px 14px; }
       .timeline-dual::after { left: 16px; }
       .tl-container { width: 100%; padding-left: 36px; padding-right: 0; text-align: left !important; left: 0 !important; }
       .tl-left .tl-dot, .tl-right .tl-dot { left: 8px; }
@@ -521,10 +521,110 @@
 
 <script>
 /**
+ * 繁日雙語對照字典 (i18n Dictionary)
+ */
+const I18N = {
+  zh: {
+    appTitle: "人生履歷書",
+    overview: "📊 概覽・對比",
+    basic: "🪪 基本資料",
+    history: "🎓 學歷・經歷",
+    skills: "📜 證照・資格",
+    achievements: "🏆 表揚・成就",
+    diary: "📝 筆記・日記",
+    plans: "🎯 目標管理",
+    skilltree: "🌳 AI 技能樹",
+    settings: "⚙️ 設定・分享",
+    all: "全部",
+    filterHistory: "🎓 經歷",
+    filterSkills: "📜 資格",
+    filterAchieve: "🏆 成就",
+    filterPlans: "🎯 目標",
+    filterDiary: "📝 筆記",
+    lifeProgress: "人生進度與階段",
+    ageSuffix: "歲",
+    expectedLife: "預期壽命 換算",
+    stage1: "成長期 (0-22歲)",
+    stage2: "青年・開拓期 (23-35歲)",
+    stage3: "充實・飛躍期 (36-50歲)",
+    stage4: "黃金・圓熟期 (51-65歲)",
+    stage5: "自由・終生志業 (66歲~)",
+    syncOnline: "雲端已同步",
+    syncing: "同步中...",
+    syncOffline: "未登入 (離線本機)",
+    logout: "結束",
+    addChild: "+ 孩子",
+    quickAdd: "新增",
+    targetMode: "🎯 逆向模式 (指定目標)",
+    exploreMode: "🔍 探索模式 (AI提案)",
+    generateTree: "✨ 產生 / 更新技能樹",
+    generating: "AI 正在分析全維度資料...",
+    abilityParams: "能力雷達圖",
+    jisPrintBtn: "🖨️ 產生與列印 JIS 履歷書",
+    myPlansTitle: "🎯 我的目標・計畫",
+    parentExpectTitle: "親友對我的期待",
+    myExpectToChildTitle: "🎯 我對孩子的期待",
+    childSelfGoalTitle: "孩子自己的目標",
+    pwaBannerTitle: "將應用程式安裝至主畫面",
+    pwaBannerDesc: "支援全螢幕與無網路離線使用",
+    installBtn: "安裝",
+    laterBtn: "稍後",
+    langSwitch: "🇹🇼 繁體中文"
+  },
+  ja: {
+    appTitle: "人生履歴書",
+    overview: "📊 概要・対比",
+    basic: "🪪 基本情報",
+    history: "🎓 学歴・職歴",
+    skills: "📜 免許・資格",
+    achievements: "🏆 表彰・実績",
+    diary: "📝 メモ・日記",
+    plans: "🎯 目標管理",
+    skilltree: "🌳 AI 技能樹",
+    settings: "⚙️ 設定・共有",
+    all: "すべて",
+    filterHistory: "🎓 経歴",
+    filterSkills: "📜 資格",
+    filterAchieve: "🏆 実績",
+    filterPlans: "🎯 プラン",
+    filterDiary: "📝 メモ",
+    lifeProgress: "LIFE PROGRESS & STAGE",
+    ageSuffix: "歳",
+    expectedLife: "期待寿命 換算",
+    stage1: "成長期 (0-22歳)",
+    stage2: "青年・開拓期 (23-35歳)",
+    stage3: "充実・飛躍期 (36-50歳)",
+    stage4: "黄金・円熟期 (51-65歳)",
+    stage5: "自由・ライフワーク (66歳~)",
+    syncOnline: "クラウド同期済",
+    syncing: "同期中...",
+    syncOffline: "未ログイン (ローカル)",
+    logout: "終了",
+    addChild: "+ 子供",
+    quickAdd: "新規追加",
+    targetMode: "🎯 逆算モード (目標指定)",
+    exploreMode: "🔍 探索モード (AI提案)",
+    generateTree: "✨ スキルツリーを生成・更新",
+    generating: "AIが全データを分析中...",
+    abilityParams: "能力パラメーター",
+    jisPrintBtn: "🖨️ JIS履歴書を作成・印刷",
+    myPlansTitle: "🎯 自分の目標・プラン",
+    parentExpectTitle: "親・家族からの期待",
+    myExpectToChildTitle: "🎯 私の期待 (子供へ)",
+    childSelfGoalTitle: "子供自身の目標",
+    pwaBannerTitle: "ホーム画面にアプリを追加",
+    pwaBannerDesc: "全画面＆オフラインで快適に使えます",
+    installBtn: "インストール",
+    laterBtn: "後で",
+    langSwitch: "🇯🇵 日本語"
+  }
+};
+
+/**
  * PWA Service Worker & Manifest Injection
  */
 const manifestStr = JSON.stringify({
-  "name": "人生履歴書 - Life Resume Pro",
+  "name": "人生履歴書 / 人生履歷書 Pro",
   "short_name": "人生履歴書",
   "description": "JIS R3規格準拠・AI動的スキルツリー・家族共有対応の次世代人生管理システム",
   "start_url": "./",
@@ -549,7 +649,6 @@ const manifestStr = JSON.stringify({
 });
 document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="data:application/manifest+json;charset=utf-8,${encodeURIComponent(manifestStr)}">`);
 
-// Inlined Service Worker for Offline PWA Caching
 if ('serviceWorker' in navigator) {
   const swCode = `
     const CACHE_NAME = 'life-resume-pwa-v3';
@@ -567,7 +666,7 @@ if ('serviceWorker' in navigator) {
 }
 
 /**
- * 人生履歴書 核心エンジン (V3.0 Pro PWA)
+ * 人生履歴書 核心引擎 (V3.0 Pro PWA)
  */
 const STAGES = ['乳幼児期 (0-6歳)', '小学生 (7-12歳)', '中学生 (13-15歳)', '高校生 (16-18歳)', '大学/専門 (19-22歳)', '20代 (若手社会人)', '30代 (中堅)', '40代以降', '全期間共通'];
 const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニケーション', '専門資格'];
@@ -575,7 +674,7 @@ const SKILL_DIMS = ['語学', 'IT・技術', 'マネジメント', 'コミュニ
 const App = {
   DB_KEY: 'LIFE_RESUME_V12_DB', 
   data: {
-    settings: { lastSync: null, mainProfileId: 'parent_self', printEra: 'western' },
+    settings: { lastSync: null, mainProfileId: 'parent_self', printEra: 'western', lang: 'zh' },
     profiles: {
       'parent_self': {
         id: 'parent_self', name: '本人', role: 'parent', password: '', isClaimed: false, shareCode: '',
@@ -591,11 +690,9 @@ const App = {
     modalContext: null, dialog: null, isSyncing: false, printFilter: null,
     viewImageSrc: null, loginProfileId: '',
     
-    // PWA Install Prompt
     deferredPrompt: null,
     showPwaBanner: false,
 
-    // AI 快取系統
     skillTreeCaches: {}, 
     skillTreeMode: 'B', 
     skillTreeTarget: '', 
@@ -604,6 +701,17 @@ const App = {
 
   chartInstance: null,
   networkInstance: null,
+
+  t(key) {
+    const lang = this.data.settings.lang || 'zh';
+    return I18N[lang]?.[key] || I18N['zh'][key] || key;
+  },
+
+  toggleLanguage() {
+    this.data.settings.lang = (this.data.settings.lang === 'zh') ? 'ja' : 'zh';
+    this.saveData();
+    this.render();
+  },
 
   init() {
     this.loadData();
@@ -679,6 +787,7 @@ const App = {
           if (!this.data.settings) this.data.settings = {};
           if (!this.data.settings.mainProfileId) this.data.settings.mainProfileId = 'parent_self';
           if (!this.data.settings.printEra) this.data.settings.printEra = 'western';
+          if (!this.data.settings.lang) this.data.settings.lang = 'zh';
 
           Object.values(this.data.profiles).forEach(p => {
              if(!p.diary) p.diary = []; 
@@ -1216,7 +1325,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
           console.error("Skill Tree Generation Error:", e);
           this.state.skillTreeGenerating = false; 
           this.render(); 
-          this.showAlert("生成失敗，原因：\n" + e.message + "\n\n(ヒント：エラーが発生した場合は、下のAIモデルをgemini-2.0-flashまたはgemini-1.5-flashに変更してみてください)"); 
+          this.showAlert("生成失敗，原因：\n" + e.message + "\n\n(ヒント：エラーが発生した場合は、下のAIモデルをgemini-2.0-flashに変更してみてください)"); 
       }
   },
 
@@ -1246,7 +1355,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
           
           return {
             ...n, color: color, shape: shape,
-            font: { color: fontColor, size: 14, bold: true, face: 'Inter, Noto Sans JP' },
+            font: { color: fontColor, size: 14, bold: true, face: 'Inter, Noto Sans TC, Noto Sans JP' },
             shadow: { enabled: true, color: 'rgba(0,0,0,0.12)', size: 8, x: 2, y: 4 },
             margin: 10,
             borderWidth: 2
@@ -1361,7 +1470,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
                     ticks: { display: false, stepSize: 20 },
                     grid: { color: 'rgba(226, 232, 240, 0.8)' },
                     angleLines: { color: 'rgba(226, 232, 240, 0.8)' },
-                    pointLabels: { font: { size: 12, weight: '600', family: 'Inter, Noto Sans JP' }, color: '#475569' }
+                    pointLabels: { font: { size: 12, weight: '600', family: 'Inter, Noto Sans TC, Noto Sans JP' }, color: '#475569' }
                 }
             },
             plugins: { legend: { display: false } },
@@ -1403,8 +1512,8 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
   updateHeaderSyncUI() {
     const ind = document.getElementById('sync-indicator');
     if(!ind) return;
-    if(window.CloudSync?.isLoggedIn) { ind.innerHTML = `<div class="sync-dot ${this.state.isSyncing?'syncing':'online'}"></div> <span>${this.state.isSyncing?'同期中...':'クラウド同期済'}</span>`; } 
-    else { ind.innerHTML = `<span style="color:#94a3b8;">未ログイン (ローカル)</span>`; }
+    if(window.CloudSync?.isLoggedIn) { ind.innerHTML = `<div class="sync-dot ${this.state.isSyncing?'syncing':'online'}"></div> <span>${this.state.isSyncing?this.t('syncing'):this.t('syncOnline')}</span>`; } 
+    else { ind.innerHTML = `<span style="color:#94a3b8;">${this.t('syncOffline')}</span>`; }
   },
 
   templateImageViewer() {
@@ -1458,8 +1567,11 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         });
 
         return `<div class="overlay"><div class="dialog-box" style="text-align:center;">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+          <button class="btn btn-lang btn-sm" onclick="App.toggleLanguage()">${(this.data.settings.lang==='zh')?'🇹🇼 繁體中文 ➔ 🇯🇵 日本語':'🇯🇵 日本語 ➔ 🇹🇼 繁體中文'}</button>
+        </div>
         <div style="font-size:36px; margin-bottom:8px;">📖</div>
-        <h2 style="font-weight:800; color:var(--primary-dark); margin-top:0; margin-bottom:6px; letter-spacing:-0.02em;">人生履歴書</h2>
+        <h2 style="font-weight:800; color:var(--primary-dark); margin-top:0; margin-bottom:6px; letter-spacing:-0.02em;">${this.t('appTitle')}</h2>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:24px; font-weight:600;">V3.0 Pro PWA Edition</div>
         ${loginBtns}
         <div style="margin-top:28px; border-top:1px dashed var(--border); padding-top:20px;">
@@ -1496,37 +1608,36 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     const b = p.basic; const age = b.birthday ? Math.floor((Date.now() - new Date(b.birthday).getTime()) / 31557600000) : 0;
     const lifeBase = b.gender === 'female' ? 87 : 81; const lifePct = Math.min(100, Math.round((age / lifeBase) * 100));
 
-    // 年齡階段分析
-    let stageTitle = "成長期 (0-22歳)";
-    if (age >= 23 && age <= 35) stageTitle = "青年・開拓期 (23-35歳)";
-    else if (age >= 36 && age <= 50) stageTitle = "充実・飛躍期 (36-50歳)";
-    else if (age >= 51 && age <= 65) stageTitle = "黄金・円熟期 (51-65歳)";
-    else if (age >= 66) stageTitle = "自由・ライフワーク (66歳~)";
+    let stageTitle = this.t('stage1');
+    if (age >= 23 && age <= 35) stageTitle = this.t('stage2');
+    else if (age >= 36 && age <= 50) stageTitle = this.t('stage3');
+    else if (age >= 51 && age <= 65) stageTitle = this.t('stage4');
+    else if (age >= 66) stageTitle = this.t('stage5');
 
     let profileSelect = '';
     if (this.state.loginProfileId === mainId) {
         profileSelect = `<select onchange="App.switchProfile(this.value)" style="width:auto; margin:0; padding:8px 12px; font-size:13px; font-weight:600;">
-            <option value="${mainId}" ${p.id === mainId ? 'selected' : ''}>👤 ${this.data.profiles[mainId].name} の記録</option>
+            <option value="${mainId}" ${p.id === mainId ? 'selected' : ''}>👤 ${this.data.profiles[mainId].name}</option>
             ${otherIds.map(id => {
                 const pr = this.data.profiles[id];
                 const label = pr.isClaimed ? '共有' : 'お子様';
                 return `<option value="${id}" ${p.id === id ? 'selected' : ''}>🌱 ${pr.name} (${label})</option>`;
             }).join('')}
-        </select><button class="btn btn-primary btn-sm" onclick="App.addChild()">+ 子供</button>`;
+        </select><button class="btn btn-primary btn-sm" onclick="App.addChild()">${this.t('addChild')}</button>`;
     } else {
-        profileSelect = `<span class="tag" style="background:var(--primary); font-size:12px; padding:6px 12px;">閲覧中: ${p.name}</span>`;
+        profileSelect = `<span class="tag" style="background:var(--primary); font-size:12px; padding:6px 12px;">${p.name}</span>`;
     }
 
     const tabsList = [
-      ['overview', '📊 概要・対比'],
-      ['basic', '🪪 基本情報'],
-      ['history', '🎓 学歴・職歴'],
-      ['skills', '📜 免許・資格'],
-      ['achievements', '🏆 表彰・実績'],
-      ['diary', '📝 メモ・日記'],
-      ['plans', '🎯 目標管理'],
-      ['skilltree', '🌳 AI 技能樹'],
-      ['settings', '⚙️ 設定・共有']
+      ['overview', this.t('overview')],
+      ['basic', this.t('basic')],
+      ['history', this.t('history')],
+      ['skills', this.t('skills')],
+      ['achievements', this.t('achievements')],
+      ['diary', this.t('diary')],
+      ['plans', this.t('plans')],
+      ['skilltree', this.t('skilltree')],
+      ['settings', this.t('settings')]
     ];
 
     return `
@@ -1536,8 +1647,9 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         <div id="sync-indicator" class="sync-indicator"></div>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-lang btn-sm" onclick="App.toggleLanguage()" title="語言切換 / 言語切替">${(this.data.settings.lang==='zh')?'🇹🇼 繁中':'🇯🇵 日本語'}</button>
         ${profileSelect}
-        <button class="btn btn-secondary btn-sm" onclick="App.logout()">終了</button>
+        <button class="btn btn-secondary btn-sm" onclick="App.logout()">${this.t('logout')}</button>
       </div>
     </div>
 
@@ -1547,13 +1659,13 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         <div style="display:flex; align-items:center; gap:12px;">
           <span style="font-size:24px;">📱</span>
           <div>
-            <div style="font-weight:700; font-size:14px;">ホーム画面にアプリを追加</div>
-            <div style="font-size:12px; opacity:0.9;">全画面＆オフラインで快適に使えます</div>
+            <div style="font-weight:700; font-size:14px;">${this.t('pwaBannerTitle')}</div>
+            <div style="font-size:12px; opacity:0.9;">${this.t('pwaBannerDesc')}</div>
           </div>
         </div>
         <div style="display:flex; gap:8px;">
-          <button class="btn btn-sm btn-secondary" onclick="App.state.showPwaBanner=false; App.render()">後で</button>
-          <button class="btn btn-sm btn-success" onclick="App.promptPwaInstall()">インストール</button>
+          <button class="btn btn-sm btn-secondary" onclick="App.state.showPwaBanner=false; App.render()">${this.t('laterBtn')}</button>
+          <button class="btn btn-sm btn-success" onclick="App.promptPwaInstall()">${this.t('installBtn')}</button>
         </div>
       </div>` : ''}
 
@@ -1561,12 +1673,12 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
       <div class="life-hero">
         <div style="display:flex; justify-content:space-between; align-items:flex-end;">
           <div>
-            <div style="font-size:11px; font-weight:800; letter-spacing:1.5px; opacity:0.85; margin-bottom:4px;">LIFE PROGRESS & STAGE</div>
-            <div style="font-size:28px; font-weight:900; letter-spacing:-0.02em;">${age} <span style="font-size:16px; font-weight:500; opacity:0.9;">歳</span> <span style="font-size:13px; font-weight:600; background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:12px; margin-left:8px;">${stageTitle}</span></div>
+            <div style="font-size:11px; font-weight:800; letter-spacing:1.5px; opacity:0.85; margin-bottom:4px;">${this.t('lifeProgress')}</div>
+            <div style="font-size:28px; font-weight:900; letter-spacing:-0.02em;">${age} <span style="font-size:16px; font-weight:500; opacity:0.9;">${this.t('ageSuffix')}</span> <span style="font-size:13px; font-weight:600; background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:12px; margin-left:8px;">${stageTitle}</span></div>
           </div>
           <div style="text-align:right;">
             <div style="font-size:28px; font-weight:900;">${lifePct}<span style="font-size:16px;">%</span></div>
-            <div style="font-size:11px; opacity:0.85;">期待寿命 ${lifeBase} 歳換算</div>
+            <div style="font-size:11px; opacity:0.85;">${this.t('expectedLife')} (${lifeBase}${this.t('ageSuffix')})</div>
           </div>
         </div>
         <div class="progress-bar-bg">
@@ -1574,7 +1686,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         </div>
       </div>
 
-      <!-- MODERN SEGMENTED TABS -->
+      <!-- MODERN SEGMENTED TABS (完全修復切邊) -->
       <div class="tabs-wrapper">
         ${tabsList.map(([k, label]) => `<div class="tab ${this.state.activeTab === k ? 'active' : ''}" onclick="App.changeTab('${k}')">${label}</div>`).join('')}
       </div>
@@ -1584,7 +1696,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     </div>
 
     <!-- FLOATING ACTION BUTTON (QUICK ADD) -->
-    <button class="fab-btn" title="新規追加" onclick="App.openQuickAddModal()">＋</button>
+    <button class="fab-btn" title="${this.t('quickAdd')}" onclick="App.openQuickAddModal()">＋</button>
     `;
   },
 
@@ -1613,32 +1725,32 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         <div class="grid-2" style="margin-bottom:20px;">
             <div>
                 <div class="stats-grid" style="margin-bottom:0; height:100%; grid-template-columns: 1fr 1fr;">
-                  <div class="stat-box"><div class="stat-val">${totalHistory}</div><div class="stat-label">学歴・職歴</div></div>
-                  <div class="stat-box"><div class="stat-val">${totalSkills}</div><div class="stat-label">免許・資格</div></div>
-                  <div class="stat-box"><div class="stat-val" style="color:var(--success);">${successRate}%</div><div class="stat-label">目標達成率</div></div>
-                  <div class="stat-box"><div class="stat-val">${totalPlans}</div><div class="stat-label">設定プラン</div></div>
+                  <div class="stat-box"><div class="stat-val">${totalHistory}</div><div class="stat-label">${(this.data.settings.lang==='zh')?'學歷・經歷':'学歴・職歴'}</div></div>
+                  <div class="stat-box"><div class="stat-val">${totalSkills}</div><div class="stat-label">${(this.data.settings.lang==='zh')?'證照・資格':'免許・資格'}</div></div>
+                  <div class="stat-box"><div class="stat-val" style="color:var(--success);">${successRate}%</div><div class="stat-label">${(this.data.settings.lang==='zh')?'目標達成率':'目標達成率'}</div></div>
+                  <div class="stat-box"><div class="stat-val">${totalPlans}</div><div class="stat-label">${(this.data.settings.lang==='zh')?'設定目標數':'設定プラン'}</div></div>
                 </div>
             </div>
             <div class="card" style="margin-bottom:0; padding:16px;">
-              <div style="font-size:13px; text-align:center; font-weight:700; color:var(--primary-dark); margin-bottom:6px;">能力パラメーター</div>
+              <div style="font-size:13px; text-align:center; font-weight:700; color:var(--primary-dark); margin-bottom:6px;">${this.t('abilityParams')}</div>
               <div class="chart-container"><canvas id="skillRadarChart"></canvas></div>
             </div>
         </div>
 
         <div class="card">
           <div class="card-title">
-            <span>⏱️ タイムライン対比</span>
+            <span>⏱️ ${(this.data.settings.lang==='zh')?'雙軌時間軸對比':'タイムライン対比'}</span>
           </div>
 
           <!-- Timeline Filter Chips -->
           <div class="timeline-filter-bar">
             ${[
-              ['all', 'すべて'],
-              ['history', '🎓 経歴'],
-              ['skills', '📜 資格'],
-              ['achievements', '🏆 実績'],
-              ['plans', '🎯 プラン'],
-              ['diary', '📝 メモ']
+              ['all', this.t('all')],
+              ['history', this.t('filterHistory')],
+              ['skills', this.t('filterSkills')],
+              ['achievements', this.t('filterAchieve')],
+              ['plans', this.t('filterPlans')],
+              ['diary', this.t('filterDiary')]
             ].map(([fKey, fLabel]) => `<div class="filter-chip ${this.state.timelineFilter === fKey ? 'active' : ''}" onclick="App.setTimelineFilter('${fKey}')">${fLabel}</div>`).join('')}
           </div>
 
@@ -1646,16 +1758,16 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
       
       let items = [];
       if(b.birthday) items.push({ filterType: 'history', year: new Date(b.birthday).getFullYear(), month: new Date(b.birthday).getMonth()+1, title: '誕生', catLabel: 'Birth', isPlan: false, color: 'var(--birth-color)' });
-      p.history.forEach(i => items.push({...i, filterType: 'history', catLabel: '経歴', color: 'var(--primary)'}));
-      p.skills.forEach(i => items.push({...i, filterType: 'skills', catLabel: '資格', color: 'var(--skill-color)'}));
-      p.achievements.forEach(i => items.push({...i, filterType: 'achievements', catLabel: '実績', color: 'var(--achieve-color)'}));
+      p.history.forEach(i => items.push({...i, filterType: 'history', catLabel: (this.data.settings.lang==='zh'?'經歷':'経歴'), color: 'var(--primary)'}));
+      p.skills.forEach(i => items.push({...i, filterType: 'skills', catLabel: (this.data.settings.lang==='zh'?'資格':'資格'), color: 'var(--skill-color)'}));
+      p.achievements.forEach(i => items.push({...i, filterType: 'achievements', catLabel: (this.data.settings.lang==='zh'?'實績':'実績'), color: 'var(--achieve-color)'}));
       
       (p.diary||[]).forEach(i => {
           const isOwner = i.author === myId;
           if (isOwner || i.visibility === 'visible') {
-              items.push({...i, filterType: 'diary', catLabel: 'メモ', color: 'var(--diary-color)', displayDate: i.date});
+              items.push({...i, filterType: 'diary', catLabel: (this.data.settings.lang==='zh'?'筆記':'メモ'), color: 'var(--diary-color)', displayDate: i.date});
           } else {
-              items.push({ filterType: 'diary', year: i.year, month: i.month, title: '🔒 未公開メモ', catLabel: 'メモ', color: '#cbd5e1', displayDate: i.date });
+              items.push({ filterType: 'diary', year: i.year, month: i.month, title: '🔒 未公開メモ', catLabel: (this.data.settings.lang==='zh'?'筆記':'メモ'), color: '#cbd5e1', displayDate: i.date });
           }
       });
       
@@ -1665,10 +1777,10 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
           let color = 'var(--plan-my)';
 
           if (p.id === myId) {
-              label = i.author === myId ? '自分の目標' : '親・家族からの期待';
+              label = i.author === myId ? (this.data.settings.lang==='zh'?'自身目標':'自分の目標') : (this.data.settings.lang==='zh'?'親友期待':'親・家族の期待');
               color = i.author === myId ? 'var(--plan-my)' : 'var(--plan-parent)';
           } else {
-              label = i.author === myId ? '私の期待' : `${p.name}の目標`;
+              label = i.author === myId ? (this.data.settings.lang==='zh'?'我的期待':'私の期待') : `${p.name}の目標`;
               color = i.author === myId ? 'var(--plan-parent)' : 'var(--plan-my)';
           }
 
@@ -1676,7 +1788,6 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
           else items.push({ filterType: 'plans', year: i.year, month: i.month, title: '🔒 未公開目標', catLabel: label, isPlan: true, color: '#cbd5e1' }); 
       });
 
-      // 篩選處理
       if (this.state.timelineFilter !== 'all') {
           items = items.filter(i => i.filterType === this.state.timelineFilter);
       }
@@ -1684,14 +1795,14 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
       items.sort((a,b) => (a.year||0)-(b.year||0) || (a.month||0)-(b.month||0));
       
       if (items.length === 0) {
-          html += `<div style="text-align:center; color:var(--text-muted); padding:30px; font-size:14px;">該当する記録がありません</div>`;
+          html += `<div style="text-align:center; color:var(--text-muted); padding:30px; font-size:14px;">${(this.data.settings.lang==='zh')?'無符合條件的紀錄':'該当する記録がありません'}</div>`;
       }
 
       items.forEach(i => {
-        const titleDecor = i.status === 'completed' ? ` <span class="badge-success">達成済</span>` : '';
+        const titleDecor = i.status === 'completed' ? ` <span class="badge-success">${(this.data.settings.lang==='zh'?'已達成':'達成済')}</span>` : '';
         const dateStr = i.displayDate ? i.displayDate.replace(/-/g, '/') : `${i.year||'?'}年${i.month?i.month+'月':''}`;
-        const titleFontSize = i.catLabel === 'メモ' ? '14px' : '16px';
-        const titleFontWeight = i.catLabel === 'メモ' ? '500' : '700';
+        const titleFontSize = i.catLabel === 'メモ' || i.catLabel === '筆記' ? '14px' : '16px';
+        const titleFontWeight = i.catLabel === 'メモ' || i.catLabel === '筆記' ? '500' : '700';
 
         html += `<div class="tl-container ${i.isPlan?'tl-right':'tl-left'}"><div class="tl-dot" style="border-color: ${i.color};"></div><div class="tl-content" style="border-${i.isPlan?'left':'right'}:4px solid ${i.color};"><div style="font-size:11px; font-weight:700; color:var(--text-sub);"><span class="tag" style="background:${i.color}">${i.catLabel}</span> ${dateStr}</div><div style="font-weight:${titleFontWeight}; font-size:${titleFontSize}; margin-top:6px; white-space:pre-wrap;">${i.title} ${i.eduStatus?`[${i.eduStatus}]`:''} ${titleDecor}</div>${i.desc?`<div style="font-size:12.5px; color:var(--text-sub); margin-top:6px; line-height:1.4;">${i.desc}</div>`:''}${i.photo?`<img src="${i.photo}" style="width:100%; max-width:200px; margin-top:10px; border-radius:8px; cursor:zoom-in; border:1px solid #e2e8f0;" onclick="App.viewImage('${i.photo}')">`:''}</div></div>`;
       });
@@ -1700,8 +1811,8 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
 
     if(tab === 'basic') {
       const todayStr = this.getLocalTodayString();
-      return topNotice + `<div class="card"><div class="card-title">JIS 基礎情報 (R3規格準拠)</div><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img" style="cursor:zoom-in;" onclick="App.viewImage('${b.photo}')">${isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">削除</button>`}` : `<div style="width:110px; height:140px; border:2px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:28px;">📷</div>${isReadOnly ? '' : `<button class="btn btn-primary btn-sm" onclick="App.uploadPhoto('basic')">写真貼付</button>`}`}</div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">氏名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)" ${isReadOnly ? 'disabled' : ''}><label style="font-size:12px; font-weight:700; color:var(--text-sub);">ふりがな</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)" ${isReadOnly ? 'disabled' : ''}><div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">性別 (任意)</label><select onchange="App.updateBasic('gender', this.value)" ${isReadOnly ? 'disabled' : ''}><option value="" ${b.gender===''?'selected':''}>未記載</option><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">生年月日</label><input type="date" value="${b.birthday||''}" max="${todayStr}" onchange="App.updateBasic('birthday', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div></div></div>
-      <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">現住所 郵便番号</label><input type="text" value="${b.postalCode||''}" onchange="App.updateBasic('postalCode', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">現住所</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div>
+      return topNotice + `<div class="card"><div class="card-title">${this.t('basic')} (JIS R3)</div><div class="grid-2"><div class="profile-photo-area">${b.photo ? `<img src="${b.photo}" class="profile-photo-img" style="cursor:zoom-in;" onclick="App.viewImage('${b.photo}')">${isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" onclick="App.updateBasic('photo', null)">削除</button>`}` : `<div style="width:110px; height:140px; border:2px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:28px;">📷</div>${isReadOnly ? '' : `<button class="btn btn-primary btn-sm" onclick="App.uploadPhoto('basic')">写真貼付</button>`}`}</div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">氏名 / 姓名</label><input type="text" value="${p.name}" onchange="App.updateName(this.value)" ${isReadOnly ? 'disabled' : ''}><label style="font-size:12px; font-weight:700; color:var(--text-sub);">ふりがな / 拼音</label><input type="text" value="${b.furigana||''}" onchange="App.updateBasic('furigana', this.value)" ${isReadOnly ? 'disabled' : ''}><div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">性別 (任意)</label><select onchange="App.updateBasic('gender', this.value)" ${isReadOnly ? 'disabled' : ''}><option value="" ${b.gender===''?'selected':''}>未記載</option><option value="male" ${b.gender==='male'?'selected':''}>男</option><option value="female" ${b.gender==='female'?'selected':''}>女</option></select></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">生年月日</label><input type="date" value="${b.birthday||''}" max="${todayStr}" onchange="App.updateBasic('birthday', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div></div></div>
+      <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">現住所 郵便番号 / 郵遞區號</label><input type="text" value="${b.postalCode||''}" onchange="App.updateBasic('postalCode', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">現住所 / 地址</label><input type="text" value="${b.address||''}" onchange="App.updateBasic('address', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div>
       <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">電話番号</label><input type="text" value="${b.phone||''}" onchange="App.updateBasic('phone', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">Email</label><input type="text" value="${b.email||''}" onchange="App.updateBasic('email', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div>
       
       <div style="margin-top:20px; border-top:1px dashed var(--border); padding-top:20px;"></div>
@@ -1710,10 +1821,10 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
       </div>`;
     }
 
-    if(tab === 'history') return topNotice + this.buildListUI('history', '学歴・職歴', isReadOnly);
-    if(tab === 'skills') return topNotice + this.buildListUI('skills', '免許・資格', isReadOnly);
-    if(tab === 'achievements') return topNotice + this.buildListUI('achievements', '表彰・出来事', isReadOnly);
-    if(tab === 'diary') return topNotice + this.buildDiaryUI('diary', '📝 メモ・日記 (格言・一言メモ)', isReadOnly);
+    if(tab === 'history') return topNotice + this.buildListUI('history', this.t('history'), isReadOnly);
+    if(tab === 'skills') return topNotice + this.buildListUI('skills', this.t('skills'), isReadOnly);
+    if(tab === 'achievements') return topNotice + this.buildListUI('achievements', this.t('achievements'), isReadOnly);
+    if(tab === 'diary') return topNotice + this.buildDiaryUI('diary', this.t('diary'), isReadOnly);
     
     if(tab === 'plans') {
         const requests = (p.plans||[]).filter(i => i.author === myId && i.visibility === 'requested');
@@ -1729,9 +1840,9 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
                     const canEdit = isOwner; 
                     const canComplete = !isCompleted && (isOwner || p.id === myId); 
                     
-                    const compBtn = canComplete ? `<button class="btn btn-success btn-sm" onclick="event.stopPropagation(); App.triggerCompletePlan('${i.id}')">達成</button>` : '';
+                    const compBtn = canComplete ? `<button class="btn btn-success btn-sm" onclick="event.stopPropagation(); App.triggerCompletePlan('${i.id}')">${(this.data.settings.lang==='zh'?'達成':'達成')}</button>` : '';
                     const visibilityBtn = isOwner ? `<button class="btn ${i.visibility === 'visible' ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="event.stopPropagation(); App.toggleVisibility('plans','${i.id}')">${i.visibility === 'visible' ? '🔓 公開中' : '🔒 非公開'}</button>` : '';
-                    const titleUI = isCompleted ? `<span class="badge-success">達成済</span> <strike style="color:#94a3b8;">${i.title}</strike>` : i.title;
+                    const titleUI = isCompleted ? `<span class="badge-success">${(this.data.settings.lang==='zh'?'已達成':'達成済')}</span> <strike style="color:#94a3b8;">${i.title}</strike>` : i.title;
 
                     return `<div class="list-item"><div class="item-content" ${canEdit?`onclick="App.openModal('plans','${i.id}')"`:''}><div class="item-meta">${i.year}年 <span class="tag" style="background:#64748b;">${i.stage}</span></div><div class="item-title">${titleUI}</div><div class="item-desc">${i.desc||''}</div></div><div style="display:flex; flex-direction:column; gap:6px; min-width:80px;">${visibilityBtn}${compBtn}${canEdit?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('plans','${i.id}')">削除</button>`:''}</div></div>`;
                 }
@@ -1742,12 +1853,12 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         let myTitle = ''; let otherTitle = '';
         let showAddMy = false;
         if (p.id === myId) {
-            myTitle = '🎯 自分の目標・プラン';
-            otherTitle = '親・家族からの期待'; 
+            myTitle = this.t('myPlansTitle');
+            otherTitle = this.t('parentExpectTitle'); 
             showAddMy = true;
         } else {
-            myTitle = `🎯 私の期待 (${p.name}へ)`; 
-            otherTitle = `${p.name}自身の目標`; 
+            myTitle = this.t('myExpectToChildTitle'); 
+            otherTitle = this.t('childSelfGoalTitle'); 
             showAddMy = !isReadOnly;
         }
         
@@ -1771,32 +1882,32 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
 
         return `<div class="card" style="border-top: 4px solid #6366f1;">
             <div class="card-title">
-                <span>🌳 AI 動的スキルツリー</span>
+                <span>${this.t('skilltree')}</span>
                 <span class="badge-success">Powered by Gemini 2.0</span>
             </div>
-            <p style="font-size:13.5px; color:var(--text-sub); line-height:1.6; margin-top:-6px;">AIが${p.name}さんの全データ（年齢、性別、経歴、目標）を統合分析し、専用のスキルパスを描画します。<br>💡 <b>ヒント：</b>「琥珀色」のノードをクリックすると、目標リストに直接追加できます！</p>
+            <p style="font-size:13.5px; color:var(--text-sub); line-height:1.6; margin-top:-6px;">${(this.data.settings.lang==='zh'?'AI 將整合分析您所有的資料（年齡、性別、經歷、目標），繪製出專屬的技能成長拓撲路徑。<br>💡 <b>提示：</b>點擊「琥珀色」節點，可直接將該技能加入目標清單！':'AIが全データ（年齢、性別、経歴、目標）を統合分析し、専用のスキルパスを描画します。<br>💡 <b>ヒント：</b>「琥珀色」のノードをクリックすると、目標リストに直接追加できます！')}</p>
             
             <div style="background:#f8fafc; padding:16px; border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:18px;">
                 <div style="display:flex; gap:10px; margin-bottom:12px;">
-                    <button class="btn ${!isA?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='B'; App.render()">🔍 探索モード (AI提案)</button>
-                    <button class="btn ${isA?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='A'; App.render()">🎯 逆算モード (目標指定)</button>
+                    <button class="btn ${!isA?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='B'; App.render()">${this.t('exploreMode')}</button>
+                    <button class="btn ${isA?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="App.state.skillTreeMode='A'; App.render()">${this.t('targetMode')}</button>
                 </div>
-                ${isA ? `<input type="text" placeholder="目標の職業を入力 (例: ITマネージャー、プロモデル)" value="${this.state.skillTreeTarget}" onchange="App.state.skillTreeTarget=this.value; if(App.state.skillTreeCaches['${pId}']) App.state.skillTreeCaches['${pId}']['A']=null; App.render();" style="margin-bottom:0;">` : '<div style="font-size:12.5px; color:#64748b; text-align:center; padding:6px;">💡 ヒント：AIが現在のプロフィールや環境に基づいて、将来有望なキャリアパスを提案します。</div>'}
+                ${isA ? `<input type="text" placeholder="${(this.data.settings.lang==='zh'?'輸入目標職業 (例: IT架構師、專業模特兒)':'目標の職業を入力 (例: ITマネージャー、プロモデル)')}" value="${this.state.skillTreeTarget}" onchange="App.state.skillTreeTarget=this.value; if(App.state.skillTreeCaches['${pId}']) App.state.skillTreeCaches['${pId}']['A']=null; App.render();" style="margin-bottom:0;">` : `<div style="font-size:12.5px; color:#64748b; text-align:center; padding:6px;">💡 ${(this.data.settings.lang==='zh'?'提示：AI 將根據目前的背景與期待，探索推薦未來 2~3 條高潛力職涯途徑。':'ヒント：AIが現在のプロフィールや環境に基づいて、将来有望なキャリアパスを提案します。')}</div>`}
             </div>
 
             <button class="btn btn-primary btn-full" style="padding:14px; font-size:16px; margin-bottom:20px;" onclick="App.generateSkillTree()" ${this.state.skillTreeGenerating?'disabled':''}>
-                ${this.state.skillTreeGenerating?'AIが全データを分析中...':'✨ スキルツリーを生成・更新'}
+                ${this.state.skillTreeGenerating?this.t('generating'):this.t('generateTree')}
             </button>
 
             <!-- Skill Tree Canvas Container with Control Bar -->
             <div id="skill-network-container" style="${this.state.skillTreeGenerating?'opacity:0.3;':''}">
                 <div class="canvas-control-bar">
-                  <button class="canvas-ctrl-btn" title="拡大" onclick="App.zoomSkillTree(1.2)">➕</button>
+                  <button class="canvas-ctrl-btn" title="放大" onclick="App.zoomSkillTree(1.2)">➕</button>
                   <button class="canvas-ctrl-btn" title="縮小" onclick="App.zoomSkillTree(0.8)">➖</button>
-                  <button class="canvas-ctrl-btn" title="全体表示" onclick="App.resetSkillTree()">🎯</button>
-                  <button class="canvas-ctrl-btn" title="物理固定" onclick="App.togglePhysics()">⏸️</button>
+                  <button class="canvas-ctrl-btn" title="全景置中" onclick="App.resetSkillTree()">🎯</button>
+                  <button class="canvas-ctrl-btn" title="物理模擬切換" onclick="App.togglePhysics()">⏸️</button>
                 </div>
-                ${cache ? '' : '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:14px; font-weight:500;">上のボタンをクリックしてAIを起動してください</div>'}
+                ${cache ? '' : `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:14px; font-weight:500;">${(this.data.settings.lang==='zh'?'請點擊上方按鈕啟動 AI 生成':'上のボタンをクリックしてAIを起動してください')}</div>`}
             </div>
 
             ${currentReport ? `
@@ -1827,21 +1938,21 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
 
       return `
         <div class="card" style="border-top:4px solid var(--primary);">
-          <div class="card-title"><span>🤝 家族共有・リアルタイム共同編集</span></div>
-          <p style="font-size:12.5px; color:var(--text-sub);">共有コードを発行し、他の家族のGoogleアカウントへデータを転送・共有できます。</p>
+          <div class="card-title"><span>🤝 ${(this.data.settings.lang==='zh'?'家族共享・即時共同編輯':'家族共有・リアルタイム共同編集')}</span></div>
+          <p style="font-size:12.5px; color:var(--text-sub);">${(this.data.settings.lang==='zh'?'發行專屬共享碼，可與其他 Google 帳號即時雙向同步。':'共有コードを発行し、他の家族のGoogleアカウントへデータを転送・共有できます。')}</p>
           <div class="grid-2" style="margin-bottom:16px;">
             <select id="share-profile-select" style="margin-bottom:0;"><option value="${p.id}">${p.name} のデータを共有</option></select>
-            <button class="btn btn-primary" onclick="App.generateShareCode()">共有コードを発行 (Push)</button>
+            <button class="btn btn-primary" onclick="App.generateShareCode()">${(this.data.settings.lang==='zh'?'發行共享碼 (Push)':'共有コードを発行 (Push)')}</button>
           </div>
           <div style="border-top:1px dashed #cbd5e1; padding-top:16px;" class="grid-2">
             <input type="text" id="import-share-code" placeholder="共有コードを入力 (例: LR-ABC123)" style="margin-bottom:0;">
-            <button class="btn btn-success" onclick="App.importSharedProfile(document.getElementById('import-share-code').value)">データを受け取る (Pull)</button>
+            <button class="btn btn-success" onclick="App.importSharedProfile(document.getElementById('import-share-code').value)">${(this.data.settings.lang==='zh'?'接收共享資料 (Pull)':'データを受け取る (Pull)')}</button>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-title"><span>🔐 ${p.name} 専用パスワード設定</span></div>
-          <p style="font-size:12.5px; color:var(--text-sub);">このプロフィール専用のパスワードです。空欄にすると認証なしでログインできます。</p>
+          <div class="card-title"><span>🔐 ${p.name} ${(this.data.settings.lang==='zh'?'專屬密碼鎖設定':'専用パスワード設定')}</span></div>
+          <p style="font-size:12.5px; color:var(--text-sub);">${(this.data.settings.lang==='zh'?'此身份的專屬密碼，留空則無需驗證即可切換。':'このプロフィール専用のパスワードです。空欄にすると認証なしでログインできます。')}</p>
           <div class="grid-2"><input type="password" id="profile-pwd" placeholder="新パスワードを入力" value="${p.password||''}" style="margin-bottom:0;">
           <button class="btn btn-primary" onclick="const v=document.getElementById('profile-pwd').value; App.getProfile().password=v; App.saveData(); App.showAlert('パスワードを更新しました。');">パスワードを更新</button></div>
         </div>
@@ -1863,8 +1974,8 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         </div>
 
         <div class="card">
-          <div class="card-title"><span>💾 ローカルバックアップ (ゲスト用)</span></div>
-          <p style="font-size:12.5px; color:var(--text-sub);">手動でローカルに保存・復元できます。</p>
+          <div class="card-title"><span>💾 ${(this.data.settings.lang==='zh'?'本地手動備份 (JSON)':'ローカルバックアップ (ゲスト用)')}</span></div>
+          <p style="font-size:12.5px; color:var(--text-sub);">${(this.data.settings.lang==='zh'?'手動匯出或匯入 JSON 格式備份檔。':'手動でローカルに保存・復元できます。')}</p>
           <div class="grid-2">
             <button class="btn btn-secondary" onclick="App.exportLocalData()">エクスポート (.json)</button>
             <button class="btn btn-secondary" onclick="document.getElementById('inp-import-json').click()">インポート (.json)</button>
@@ -1886,7 +1997,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
           <div style="margin-top:16px; border-top:1px dashed #fde68a; padding-top:16px;"></div>
           <label style="font-size:12px; font-weight:700;">本人希望記入欄 (特に給料・職種・勤務時間・勤務地・その他)</label>
           <textarea rows="3" onchange="App.updateBasic('desiredConditions', this.value)" placeholder="特になし" ${isReadOnly ? 'disabled' : ''}>${b.desiredConditions||''}</textarea>
-          <button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="App.triggerPrintMode()">🖨️ JIS履歴書を作成・印刷</button>
+          <button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="App.triggerPrintMode()">${this.t('jisPrintBtn')}</button>
         </div>
         ${p.id !== this.data.settings.mainProfileId ? `<div class="card" style="border-color:var(--danger); background:#fff1f2;"><div class="card-title"><span style="color:var(--danger);">プロフィールの削除</span></div><p style="font-size:12px;">この端末から「${p.name}」のデータを削除します。</p><button class="btn btn-danger btn-full" onclick="App.deleteProfile('${p.id}')">🗑️ このプロフィールを削除</button></div>` : ''}
         <div class="card" style="font-size:11px; color:#94a3b8; text-align:center;"><p style="margin:0;">人生履歴書 V3.0 Pro PWA Edition<br>Producer: M.K(TW)</p></div>`;
@@ -1896,11 +2007,11 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
   buildListUI(cat, title, isReadOnly) {
     const items = this.getProfile()[cat] || [];
     let html = `<div class="card"><div class="card-title"><span>${title}</span> ${isReadOnly ? '' : `<button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button>`}</div>`;
-    if(items.length === 0) html += `<p style="font-size:13.5px; color:#94a3b8; text-align:center; padding:20px;">データがありません</p>`;
+    if(items.length === 0) html += `<p style="font-size:13.5px; color:#94a3b8; text-align:center; padding:20px;">${(this.data.settings.lang==='zh'?'目前尚無資料':'データがありません')}</p>`;
     items.forEach(i => {
       html += `<div class="list-item"><div class="item-content" ${isReadOnly ? '' : `onclick="App.openModal('${cat}', '${i.id}')"`}><div class="item-meta">${i.year||'?'}年 ${i.stage||''} ${i.eduStatus?`[${i.eduStatus}]`:''} ${i.dim?`[${i.dim}]`:''}</div><div class="item-title">${i.title}</div><div class="item-desc">${i.desc||''}</div></div><div class="photo-wrapper" style="position:relative;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')">${isReadOnly ? '' : `<button class="btn btn-danger btn-sm" style="position:absolute; top:-6px; right:-6px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>`}` : (isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`)}</div>${isReadOnly ? '' : `<div style="display:flex; flex-direction:column; gap:6px; min-width:60px;"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button></div>`}</div>`;
     });
-    if(cat === 'skills') html += `<div style="margin-top:16px;"><label style="font-size:12px; font-weight:700; color:var(--text-sub);">志望の動機、特技、アピールポイントなど</label><textarea rows="3" onchange="App.updateBasic('motivation', this.value)" placeholder="自己PRや志望動機などを入力" ${isReadOnly ? 'disabled' : ''}>${this.getProfile().basic.motivation||''}</textarea></div>`;
+    if(cat === 'skills') html += `<div style="margin-top:16px;"><label style="font-size:12px; font-weight:700; color:var(--text-sub);">志望の動機、特技、アピールポイントなど / 自我推薦與動機</label><textarea rows="3" onchange="App.updateBasic('motivation', this.value)" placeholder="自己PRや志望動機などを入力" ${isReadOnly ? 'disabled' : ''}>${this.getProfile().basic.motivation||''}</textarea></div>`;
     return html + `</div>`;
   },
 
@@ -1918,7 +2029,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     let html = `<div class="card" style="border-top:4px solid var(--diary-color);"><div class="card-title"><span>${title}</span> ${isOwnerView ? `<button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button>` : ''}</div>`;
     
     const filtered = [...(p[cat] || [])].sort((a,b) => (b.date > a.date ? 1 : -1));
-    if (filtered.length === 0) html += `<p style="text-align:center; font-size:13.5px; color:#94a3b8; padding:20px;">記録がありません</p>`;
+    if (filtered.length === 0) html += `<p style="text-align:center; font-size:13.5px; color:#94a3b8; padding:20px;">${(this.data.settings.lang==='zh'?'目前尚無紀錄':'記録がありません')}</p>`;
 
     filtered.forEach(i => {
       if (isOwnerView || i.visibility === 'visible') {
