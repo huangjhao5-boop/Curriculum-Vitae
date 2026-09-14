@@ -1,0 +1,8 @@
+{
+  "name": "人生原簿 (LifeLedger)",
+  "description": "父母守護的成長起點 ✕ 世代交接獨立接棒 ✕ Google Gemini AI 動態技能樹 ✕ 厚生労働省 JIS 最新規格準拠",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

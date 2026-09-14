@@ -14,9 +14,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="人生履歴書">
+  <meta name="apple-mobile-web-app-title" content="人生原簿">
   <meta name="theme-color" content="#0f766e">
-  <title>人生履歴書 / 人生履歷書 V3.0 (Pro PWA Edition)</title>
+  <meta name="description" content="父母守護的成長起點 ✕ 世代交接獨立接棒 ✕ Google Gemini AI 動態技能樹 ✕ 厚生労働省 JIS 最新規格準拠">
+  <meta property="og:title" content="人生原簿 (LifeLedger)">
+  <meta property="og:description" content="父母守護的成長起點 ✕ 世代交接獨立接棒 ✕ Google Gemini AI 動態技能樹 ✕ 厚生労働省 JIS 最新規格準拠">
+  <title>人生原簿 (LifeLedger) V3.0 (Pro PWA Edition)</title>
 
   <!-- Google Fonts: Inter & Noto Sans JP & TC -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -69,7 +72,7 @@
       --radius-full: 9999px;
     }
 
-    body {
+    html, body {
       font-family: 'Inter', 'Noto Sans TC', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
       background-color: var(--bg-color);
       color: var(--text-main);
@@ -79,10 +82,12 @@
       -webkit-tap-highlight-color: transparent;
       line-height: 1.5;
       letter-spacing: -0.01em;
+      min-height: 100vh;
+      min-height: 100dvh;
     }
     *, *::before, *::after { box-sizing: inherit; }
     
-    .container { max-width: 1060px; margin: 0 auto; padding: 20px 16px; padding-bottom: 120px; }
+    .container { max-width: 1060px; margin: 0 auto; padding: 20px 16px; padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
     
     /* Modern Glass Card */
     .card {
@@ -379,8 +384,8 @@
     /* Floating Action Button (FAB) */
     .fab-btn {
       position: fixed;
-      bottom: 28px;
-      right: 28px;
+      bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+      right: calc(28px + env(safe-area-inset-right, 0px));
       width: 58px;
       height: 58px;
       border-radius: 50%;
@@ -414,8 +419,10 @@
       z-index: 10;
     }
     .canvas-ctrl-btn {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      min-height: 36px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -429,26 +436,193 @@
     .canvas-ctrl-btn:hover { background: #f1f5f9; color: var(--primary); }
 
     /* Image Viewer (Lightbox) */
-    .image-viewer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); backdrop-filter: blur(8px); z-index: 3000; display: flex; justify-content: center; align-items: center; cursor: zoom-out; }
+    .image-viewer-overlay { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: rgba(0,0,0,0.88); 
+      backdrop-filter: blur(8px); 
+      z-index: 3000; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      cursor: zoom-out; 
+    }
     .image-viewer-img { max-width: 92%; max-height: 92%; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); object-fit: contain; }
 
     /* Export Selector */
     .export-check-list { max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: #f8fafc; margin-bottom: 10px; }
     .export-check-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px dashed #e2e8f0; font-size: 13px; }
-    .export-check-item input[type="checkbox"] { margin: 0 8px 0 0; width: 16px; height: 16px; }
+    .export-check-item input[type="checkbox"] { margin: 0 8px 0 0; width: 18px; height: 18px; min-width: 18px; min-height: 18px; }
 
     /* Overlays & Loaders */
-    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(6px); z-index: 2000; display: flex; justify-content: center; align-items: center; overflow-y: auto; padding:20px;}
+    .overlay { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: rgba(15, 23, 42, 0.65); 
+      backdrop-filter: blur(6px); 
+      z-index: 2000; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      overflow-y: auto; 
+      padding: 20px;
+    }
     .dialog-box { background: white; padding: 32px; border-radius: var(--radius-lg); width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); margin:auto; }
     .modal-box { background: white; padding: 28px; border-radius: var(--radius-lg); width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
-    .custom-dialog-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(6px); z-index: 9999; display: flex; justify-content: center; align-items: center; padding:20px; }
+    .custom-dialog-overlay { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: rgba(15, 23, 42, 0.65); 
+      backdrop-filter: blur(6px); 
+      z-index: 9999; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      padding: 20px; 
+    }
     .custom-dialog-box { background: white; padding: 28px; border-radius: var(--radius-lg); width: 100%; max-width: 380px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
     
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .loader-spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 44px; height: 44px; animation: spin 0.8s linear infinite; margin: 20px auto; }
 
+    /* Toast Notification System */
+    #toast-container {
+      position: fixed;
+      bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+      max-width: 90vw;
+    }
+    .toast-item {
+      pointer-events: auto;
+      background: rgba(15, 23, 42, 0.94);
+      color: #ffffff;
+      padding: 12px 22px;
+      border-radius: 9999px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.35), 0 8px 10px -6px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .toast-item.toast-success { border-left: 4px solid #10b981; }
+    .toast-item.toast-info { border-left: 4px solid #6366f1; }
+    .toast-item.toast-warning { border-left: 4px solid #f59e0b; }
+    .toast-item.hiding {
+      opacity: 0;
+      transform: translateY(12px) scale(0.96);
+    }
+    @keyframes toastSlideUp {
+      from { opacity: 0; transform: translateY(20px) scale(0.92); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Milestone Badge & Highlighting */
+    .milestone-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      color: #92400e;
+      border: 1px solid #f59e0b;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .tl-content.is-milestone {
+      border-left: 4px solid #f59e0b !important;
+      background: linear-gradient(to right, rgba(254, 243, 199, 0.35), #ffffff);
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.15);
+    }
+
+    /* Storybook Print & Preview Layout */
+    .storybook-wrapper {
+      background: #1e293b;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 30px 16px;
+      color: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "Noto Sans JP", sans-serif;
+    }
+    .storybook-page {
+      background: #ffffff;
+      max-width: 860px;
+      margin: 0 auto 30px auto;
+      padding: 44px;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    @media print {
+      .storybook-wrapper { background: transparent !important; padding: 0 !important; margin: 0 !important; }
+      .storybook-wrapper * { visibility: visible; }
+      .storybook-page { box-shadow: none !important; padding: 15mm 20mm !important; margin: 0 !important; max-width: 100% !important; border-radius: 0 !important; page-break-after: always; }
+      .storybook-actions { display: none !important; }
+    }
+
+    /* Universal Mobile & Touch Adaptation (< 768px) */
+    @media screen and (max-width: 768px) {
+      /* 防被動縮放：強制 input, select, textarea 最小字級保持 16px，杜絕 iOS Safari 點擊畫面強迫放大 1.2 倍 */
+      input, select, textarea {
+        font-size: 16px !important;
+        min-height: 44px;
+      }
+      /* 觸控熱區：標準觸控元件不小於 44px */
+      .btn {
+        min-height: 44px;
+        padding: 10px 18px;
+      }
+      .btn-sm {
+        min-height: 38px;
+        padding: 8px 14px;
+      }
+      .tab {
+        min-height: 44px;
+        padding: 10px 18px;
+      }
+      .canvas-ctrl-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 16px;
+      }
+      .export-check-item {
+        min-height: 44px;
+        padding: 10px 0;
+      }
+    }
+
     @media screen and (max-width: 680px) {
-      .container { padding: 12px; }
+      .container { padding: 12px; padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
       .header { padding: 10px 14px; }
       .timeline-dual::after { left: 16px; }
       .tl-container { width: 100%; padding-left: 36px; padding-right: 0; text-align: left !important; left: 0 !important; }
@@ -456,16 +630,46 @@
       .tl-content { border-left-width: 4px !important; border-right-width: 1px !important; padding: 14px; }
       .grid-2 { grid-template-columns: 1fr; gap: 12px; }
       .card { padding: 18px; }
-      .fab-btn { bottom: 20px; right: 20px; width: 52px; height: 52px; font-size: 22px; }
-      .modal-box { padding: 20px; border-radius: var(--radius) var(--radius) 0 0; position: fixed; bottom: 0; max-height: 85vh; width: 100%; max-width: 100%; }
+      .fab-btn { 
+        bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
+        right: calc(20px + env(safe-area-inset-right, 0px)); 
+        width: 52px; 
+        height: 52px; 
+        font-size: 22px; 
+      }
+      .modal-box { 
+        padding: 20px; 
+        padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+        border-radius: var(--radius) var(--radius) 0 0; 
+        position: fixed; 
+        bottom: 0; 
+        max-height: 88vh; 
+        width: 100%; 
+        max-width: 100%; 
+      }
       .overlay { padding: 0; align-items: flex-end; }
     }
 
     /* =========================================
        ULTIMATE JIS R3 Print Layout (Pixel Perfect)
        ========================================= */
-    .print-actions { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:10px; z-index:9999; }
-    .resume-preview-wrapper { background: #52525b; min-height: 100vh; padding: 20px 0; font-family: "MS Mincho", "Hiragino Mincho ProN", serif; color: black; }
+    .print-actions { 
+      position: fixed; 
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
+      left: 50%; 
+      transform: translateX(-50%); 
+      display: flex; 
+      gap: 10px; 
+      z-index: 9999; 
+    }
+    .resume-preview-wrapper { 
+      background: #52525b; 
+      min-height: 100vh; 
+      min-height: 100dvh;
+      padding: 20px 0; 
+      font-family: "MS Mincho", "Hiragino Mincho ProN", serif; 
+      color: black; 
+    }
     
     .jis-page { 
         background: white; 
@@ -525,7 +729,7 @@
  */
 const I18N = {
   zh: {
-    appTitle: "人生履歷書",
+    appTitle: "人生原簿 (LifeLedger)",
     overview: "📊 概覽・對比",
     basic: "🪪 基本資料",
     history: "🎓 學歷・經歷",
@@ -569,10 +773,50 @@ const I18N = {
     pwaBannerDesc: "支援全螢幕與無網路離線使用",
     installBtn: "安裝",
     laterBtn: "稍後",
-    langSwitch: "🇹🇼 繁體中文"
+    langSwitch: "🇹🇼 繁體中文",
+    mottoLabel: "🌟 人生座右銘 / 生命信念",
+    mottoPrompt: "點此設定您的生命座右銘（如：莫忘初衷，行你所信）",
+    mottoPlaceholder: "例如：行你所信，莫忘初心 / 願歷盡千帆，歸來仍是少年",
+    lifeMilestone: "⭐ 人生關鍵里程碑",
+    milestoneToggle: "標記為人生關鍵里程碑 (⭐ 重大轉折 / 值得世代銘記)",
+    storybookBtn: "📖 世代傳承・人生紀念冊 (Storybook)",
+    storybookTitle: "人生紀念手冊・世代傳承典藏",
+    promoteToAchieve: "🏆 晉級為榮耀成就",
+    statusCompleted: "已達成",
+    statusActive: "進行中",
+    modalNew: "新增項目",
+    modalEdit: "編輯項目",
+    modalCancel: "取消",
+    modalSave: "儲存",
+    modalYear: "年 (西曆)",
+    modalMonth: "月",
+    modalTitle: "內容 / 名稱",
+    modalDesc: "詳細敘述・心得備忘",
+    modalStage: "人生階段",
+    modalVisibility: "公開權限",
+    modalVisHidden: "🔒 僅自己可見 (私密)",
+    modalVisVisible: "🔓 世代公開 (親友共享)",
+    deleteConfirm: "確定要刪除此項目嗎？",
+    deleteBtn: "刪除",
+    toastSaved: "資料已安全儲存",
+    toastCopied: "已成功複製到剪貼簿",
+    toastPwdUpdated: "專屬密碼已安全加密更新 (SHA-256)",
+    handoverBtn: "🎁 世代傳承・交接人生履歷給孩子",
+    inheritBtn: "🌱 繼承父母為我建立的人生檔案 (我是本人・獨立接棒)",
+    inheritCardTitle: "🌱 繼承人生檔案 (孩子接棒・獨立管理)",
+    inheritCardDesc: "接收父母為您自幼記錄的求學履歷、成長足跡與守護期許，在愛的基石上自主開拓未來。",
+    handoverModalTitle: "🎁 世代交接儀式・將人生履歷贈與孩子獨立掌管",
+    handoverModalDesc: "這本履歷記錄了孩子從出生、求學到成長的所有足跡與您的期許。交接後，孩子將在自己裝置上成為這份檔案的主人，親手書寫接下來的人生！",
+    handoverBlessingPrompt: "給孩子的成年叮嚀信 / 父母寄語",
+    handoverBlessingPlaceholder: "孩子，恭喜你長大成人！這是爸爸媽媽為你記錄的人生起點。從今天起，人生這支筆交到你手中，願你在未來的路上勇敢前行，追求熱愛！",
+    handoverSuccessToast: "🎉 恭喜完成人生接棒！已正式繼承並設為主要人生檔案！",
+    generationalBannerTitle: "🕊️ 世代傳承・父母用心鋪設的人生起點",
+    generationalBannerDesc: "本檔案由父母悉心記錄了您的成長初期、學業歷程與守護期許。今天您已接過接力棒，請自主展開您的 AI 技能開拓與人生藍圖！",
+    parentHopesTitle: "💖 來自父母一生的期許與守護",
+    childGoalsTitle: "🚀 我的自主生涯目標與挑戰"
   },
   ja: {
-    appTitle: "人生履歴書",
+    appTitle: "人生原簿 (LifeLedger)",
     overview: "📊 概要・対比",
     basic: "🪪 基本情報",
     history: "🎓 学歴・職歴",
@@ -616,7 +860,47 @@ const I18N = {
     pwaBannerDesc: "全画面＆オフラインで快適に使えます",
     installBtn: "インストール",
     laterBtn: "後で",
-    langSwitch: "🇯🇵 日本語"
+    langSwitch: "🇯🇵 日本語",
+    mottoLabel: "🌟 人生の座右の銘・信条",
+    mottoPrompt: "クリックして人生の信条を設定（例：初志貫徹、一日一生）",
+    mottoPlaceholder: "例：初志貫徹、実りある人生を生きる",
+    lifeMilestone: "⭐ 人生の重要マイルストーン",
+    milestoneToggle: "人生の重要マイルストーンとして記録 (⭐ ターニングポイント)",
+    storybookBtn: "📖 人生物語・世代継承アルバムを出力",
+    storybookTitle: "人生物語・家族継承アルバム",
+    promoteToAchieve: "🏆 実績・表彰に昇格",
+    statusCompleted: "達成済み",
+    statusActive: "進行中",
+    modalNew: "新規追加",
+    modalEdit: "編集",
+    modalCancel: "キャンセル",
+    modalSave: "保存",
+    modalYear: "年 (西暦)",
+    modalMonth: "月",
+    modalTitle: "内容 / タイトル",
+    modalDesc: "詳細・メモ",
+    modalStage: "ライフステージ",
+    modalVisibility: "公開設定",
+    modalVisHidden: "🔒 非公開 (自分のみ)",
+    modalVisVisible: "🔓 公開 (共有相手も閲覧可)",
+    deleteConfirm: "この項目を削除してもよろしいですか？",
+    deleteBtn: "削除",
+    toastSaved: "データを安全に保存しました",
+    toastCopied: "クリップボードにコピーしました",
+    toastPwdUpdated: "専用パスワードを安全更新しました (SHA-256)",
+    handoverBtn: "🎁 世代継承・人生履歴書をお子様へ引き渡す",
+    inheritBtn: "🌱 親から託された人生履歴書を継承する (本人・独立)",
+    inheritCardTitle: "🌱 人生履歴書を継承する (お子様・独立管理)",
+    inheritCardDesc: "ご両親が幼少期から記録してくれた学歴・成長の足跡・願いを受け取り、自立した人生を歩み始めます。",
+    handoverModalTitle: "🎁 世代継承の儀・人生履歴書をお子様へ託す",
+    handoverModalDesc: "誕生から進学、成長の全軌跡とお母様・お父様の願いが詰まった記録です。引き渡すことで、お子様本人が人生の主人公として未来を歩み始めます。",
+    handoverBlessingPrompt: "お子様への手紙・成人の祝福メッセージ",
+    handoverBlessingPlaceholder: "成長おめでとう。あなたが誕生したあの日から今日までの歩みをここに記しました。これからはあなた自身の力で、誇りある人生を紡いでください。",
+    handoverSuccessToast: "🎉 人生の引継ぎが完了しました！メインプロフィールとして継承されました！",
+    generationalBannerTitle: "🕊️ 世代継承・両親が紡いだ成長の原点",
+    generationalBannerDesc: "誕生からの学歴や成長の足跡、親としての願いが大切に記録されています。今日からはあなた自身が人生の主役として、未来のスキルや夢を描いてください！",
+    parentHopesTitle: "💖 親・家族からの温かな期待と見守り",
+    childGoalsTitle: "🚀 自立した個人の挑戦・未来プラン"
   }
 };
 
@@ -678,7 +962,7 @@ const App = {
     profiles: {
       'parent_self': {
         id: 'parent_self', name: '本人', role: 'parent', password: '', isClaimed: false, shareCode: '',
-        basic: { furigana: '', gender: '', birthday: '', postalCode: '', address: '', phone: '', email: '', contactPostalCode:'', contactAddress:'', contactPhone:'', desiredConditions:'', motivation: '', photo: null },
+        basic: { furigana: '', gender: '', birthday: '', postalCode: '', address: '', phone: '', email: '', contactPostalCode:'', contactAddress:'', contactPhone:'', desiredConditions:'', motivation: '', motto: '', photo: null },
         history: [], skills: [], achievements: [], events: [], plans: [], diary: []
       }
     }
@@ -696,7 +980,9 @@ const App = {
     skillTreeCaches: {}, 
     skillTreeMode: 'B', 
     skillTreeTarget: '', 
-    skillTreeGenerating: false
+    skillTreeGenerating: false,
+    handoverProfileId: null,
+    showInheritModal: false
   },
 
   chartInstance: null,
@@ -802,6 +1088,7 @@ const App = {
              if(p.basic.contactPhone === undefined) p.basic.contactPhone = '';
              if(p.basic.contactPostalCode === undefined) p.basic.contactPostalCode = '';
              if(p.basic.motivation === undefined) p.basic.motivation = '';
+             if(p.basic.motto === undefined) p.basic.motto = '';
              
              const fixAuthor = (author) => {
                  if (this.data.profiles[author]) return author; 
@@ -892,21 +1179,78 @@ const App = {
   getProfile() { return this.data.profiles[this.state.activeProfileId] || this.data.profiles['parent_self']; },
 
   showAlert(message) { this.state.dialog = { type: 'alert', message, onConfirm: () => { this.state.dialog = null; this.render(); } }; this.render(); },
+  showToast(message, type = 'success', duration = 2800) {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toast-container';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    const icon = type === 'success' ? '✨' : (type === 'warning' ? '⚠️' : '💡');
+    toast.className = `toast-item toast-${type}`;
+    toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+    toast.onclick = () => {
+      toast.classList.add('hiding');
+      setTimeout(() => toast.remove(), 250);
+    };
+    container.appendChild(toast);
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 250);
+      }
+    }, duration);
+  },
   showConfirm(message, onConfirmCallback) { this.state.dialog = { type: 'confirm', message, onConfirm: () => { this.state.dialog = null; onConfirmCallback(); this.render(); }, onCancel: () => { this.state.dialog = null; this.render(); } }; this.render(); },
   showPrompt(message, onConfirmCallback) { this.state.dialog = { type: 'prompt', message, onConfirm: (val) => { this.state.dialog = null; if(val !== null) onConfirmCallback(val); this.render(); }, onCancel: () => { this.state.dialog = null; this.render(); } }; this.render(); },
 
-  executeLogin() {
+  async hashPassword(pwd, saltHex) {
+    if (!pwd) return { hash: '', salt: '' };
+    const salt = saltHex || Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+    const encoder = new TextEncoder();
+    const data = encoder.encode(pwd + ':' + salt);
+    const hashBuf = await crypto.subtle.digest('SHA-256', data);
+    const hash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    return { hash, salt };
+  },
+
+  async verifyPassword(inputPwd, storedHash, storedSalt) {
+    if (!storedHash) return true;
+    if (!storedSalt) {
+      // Legacy unhashed plain password backward compatibility
+      return inputPwd === storedHash;
+    }
+    const { hash } = await this.hashPassword(inputPwd, storedSalt);
+    return hash === storedHash;
+  },
+
+  async executeLogin() {
     const roleId = this.state.loginProfileId;
     if(!roleId) return;
     
     const targetProfile = this.data.profiles[roleId];
     if(!targetProfile) return;
 
-    const pwd = (targetProfile.password || '').trim();
-    if (pwd) {
+    const storedHash = (targetProfile.passwordHash || targetProfile.password || '').trim();
+    const storedSalt = (targetProfile.passwordSalt || '').trim();
+
+    if (storedHash) {
         const input = document.getElementById('login-pwd');
         if (!input) return; 
-        if (input.value !== pwd) { this.showAlert('パスワードが正しくありません。'); return; }
+        const isMatch = await this.verifyPassword(input.value, storedHash, storedSalt);
+        if (!isMatch) { 
+          this.showAlert('パスワードが正しくありません。'); 
+          return; 
+        }
+        // Upgrade legacy unhashed password automatically upon successful login
+        if (!targetProfile.passwordHash && targetProfile.password) {
+          const { hash, salt } = await this.hashPassword(input.value);
+          targetProfile.passwordHash = hash;
+          targetProfile.passwordSalt = salt;
+          delete targetProfile.password;
+          this.saveData();
+        }
     }
     
     if (this.networkInstance) {
@@ -917,6 +1261,28 @@ const App = {
     this.state.activeProfileId = roleId;
     this.state.view = 'app';
     this.trackEvent('login_success', { role: roleId === this.data.settings.mainProfileId ? 'main' : 'child' });
+    this.render();
+  },
+
+  async setProfilePassword(profileId, newPwd) {
+    const prof = this.data.profiles[profileId];
+    if (!prof) return;
+    const clean = (newPwd || '').trim();
+    if (!clean) {
+      delete prof.password;
+      delete prof.passwordHash;
+      delete prof.passwordSalt;
+      this.saveData();
+      this.showAlert('パスワードを解除しました。');
+      this.render();
+      return;
+    }
+    const { hash, salt } = await this.hashPassword(clean);
+    prof.passwordHash = hash;
+    prof.passwordSalt = salt;
+    delete prof.password; // 零敏感明文上雲與儲存
+    this.saveData();
+    this.showAlert('パスワードを安全に更新しました。(Web Crypto SHA-256 + Salt 加塩暗号化)');
     this.render();
   },
   
@@ -931,14 +1297,18 @@ const App = {
       if(!name || !name.trim()) return;
       const newId = 'child_' + Date.now();
       this.data.profiles[newId] = {
-        id: newId, name: name.trim(), role: 'child', password: '', isClaimed: false, shareCode: '',
+        id: newId, name: name.trim(), role: 'child', isClaimed: false, shareCode: '',
         basic: { furigana: '', gender: '', birthday: '', postalCode: '', address: '', phone: '', email: '', contactPostalCode:'', contactAddress:'', contactPhone:'', desiredConditions:'', motivation: '', photo: null },
         history: [], skills: [], achievements: [], events: [], plans: [], diary: []
       };
       this.state.activeProfileId = newId; this.saveData();
       this.trackEvent('add_child_profile');
       this.showConfirm("お子様専用のパスワードを設定しますか？", () => {
-         this.showPrompt("パスワードを入力：", (p) => { if(p && p.trim()){ this.data.profiles[newId].password = p.trim(); this.saveData(); this.render(); } });
+         this.showPrompt("パスワードを入力：", async (p) => { 
+           if(p && p.trim()){ 
+             await this.setProfilePassword(newId, p.trim());
+           } 
+         });
       });
     });
   },
@@ -1056,6 +1426,10 @@ const App = {
            if(isNew) { itemData.author = myId; itemData.status = 'active'; } 
            else { const ex = p.plans.find(i => i.id === id); itemData.author = ex.author || myId; itemData.status = ex.status; }
         }
+        const milestoneChk = document.getElementById('mod-milestone');
+        if (milestoneChk) {
+           itemData.isMilestone = !!milestoneChk.checked;
+        }
     }
     
     if (!p[ctx.category]) p[ctx.category] = [];
@@ -1074,10 +1448,11 @@ const App = {
     }
     
     this.saveData(); this.closeModal(); this.render();
+    this.showToast(this.t('toastSaved'), 'success');
   },
 
-  deleteItem(category, itemId) { this.showConfirm('項目を削除しますか？', () => { this.getProfile()[category] = this.getProfile()[category].filter(i => i.id !== itemId); this.saveData(); this.render(); }); },
-  deleteItemPhoto(cat, id) { this.showConfirm("写真を削除しますか？", () => { const i=this.getProfile()[cat].find(x=>x.id===id); if(i) i.photo=null; this.saveData(); this.render(); }); },
+  deleteItem(category, itemId) { this.showConfirm('項目を削除しますか？', () => { this.getProfile()[category] = this.getProfile()[category].filter(i => i.id !== itemId); this.saveData(); this.render(); this.showToast('已刪除項目', 'info'); }); },
+  deleteItemPhoto(cat, id) { this.showConfirm("写真を削除しますか？", () => { const i=this.getProfile()[cat].find(x=>x.id===id); if(i) i.photo=null; this.saveData(); this.render(); this.showToast('已刪除照片', 'info'); }); },
 
   toggleVisibility(category, itemId) {
       const item = this.getProfile()[category].find(i => i.id === itemId);
@@ -1085,16 +1460,36 @@ const App = {
           item.visibility = (item.visibility === 'visible') ? 'hidden' : 'visible';
           this.saveData();
           this.render();
+          this.showToast(item.visibility === 'visible' ? '🔓 已設為公開 (親友共享)' : '🔒 已設為私密 (僅自己可見)', 'info');
       }
   },
 
-  triggerCompletePlan(planId) { this.state.dialog = { type: 'complete_plan', planId: planId, message: '🎉 目標達成おめでとうございます！\nこの実績をどのカテゴリに記録しますか？' }; this.render(); },
+  triggerCompletePlan(planId) { 
+    const lang = this.data.settings.lang || 'zh';
+    this.state.dialog = { 
+      type: 'complete_plan', 
+      planId: planId, 
+      message: lang === 'zh' 
+        ? '🎉 恭喜達成目標！\n這是一段努力的成果，請選擇要將此項成就收錄於哪個生涯類別：' 
+        : '🎉 目標達成おめでとうございます！\nこの実績をどのカテゴリに記録しますか？' 
+    }; 
+    this.render(); 
+  },
   confirmCompletePlan(planId, targetCategory) {
     const p = this.getProfile(); const plan = p.plans.find(i => i.id === planId);
     if(plan) {
       plan.status = 'completed'; 
-      const cleanTitle = plan.title.replace('[AI提案] ', '');
-      const newItem = { id: 'item_' + Date.now(), year: plan.year || new Date().getFullYear(), month: plan.month || (new Date().getMonth() + 1), title: cleanTitle, desc: `【目標達成】\n` + (plan.desc || ''), stage: plan.stage, photo: plan.photo };
+      const cleanTitle = plan.title.replace('[AI提案] ', '').replace('[AI 技能目標] ', '');
+      const newItem = { 
+        id: 'item_' + Date.now(), 
+        year: plan.year || new Date().getFullYear(), 
+        month: plan.month || (new Date().getMonth() + 1), 
+        title: cleanTitle, 
+        desc: `【目標達成】\n` + (plan.desc || ''), 
+        stage: plan.stage, 
+        photo: plan.photo,
+        isMilestone: !!plan.isMilestone
+      };
       
       if(!p[targetCategory]) p[targetCategory] = []; 
       if(targetCategory === 'history') newItem.eduStatus = '卒業';
@@ -1116,6 +1511,12 @@ const App = {
 
       this.saveData();
       this.trackEvent('complete_plan', { category_saved: targetCategory });
+      const lang = this.data.settings.lang || 'zh';
+      this.showToast(
+        lang === 'zh' ? '🎉 恭喜達成目標！已榮耀記錄至生涯成就！' : '🎉 目標達成！実績に記録しました！',
+        'success',
+        3500
+      );
     }
     this.state.dialog = null; this.render();
   },
@@ -1177,6 +1578,121 @@ const App = {
     }
   },
 
+  /* === 世代傳承・獨立交接 (Generation Handover & Claim) === */
+  openHandoverModal(childId) {
+    const p = this.data.profiles[childId];
+    if (!p) return;
+    if (!p.shareCode) {
+      p.shareCode = 'LR-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      this.saveData();
+    }
+    this.state.handoverProfileId = childId;
+    this.render();
+  },
+
+  closeHandoverModal() {
+    this.state.handoverProfileId = null;
+    this.render();
+  },
+
+  async saveHandoverBlessing(childId) {
+    const p = this.data.profiles[childId];
+    if (!p) return;
+    const textEl = document.getElementById('handover-blessing-text');
+    const letter = textEl ? textEl.value.trim() : '';
+    p.blessingLetter = letter;
+    p.isHandedOver = true;
+    
+    // 記錄一筆具有里程碑意義的傳承紀念日記
+    if (letter) {
+      const todayStr = this.getLocalTodayString();
+      const existingEntry = p.diary.find(d => d.title && (d.title.includes('世代交接') || d.title.includes('世代継承')));
+      if (!existingEntry) {
+        p.diary.push({
+          id: 'diary_' + Date.now(),
+          date: todayStr,
+          title: (this.data.settings.lang==='zh'?'🕊️【世代交接】父母給孩子的成人叮嚀信':'🕊️【世代継承】両親からお子様への成人祝手紙'),
+          visibility: 'visible',
+          photo: null
+        });
+      }
+    }
+
+    this.saveData();
+    if (window.CloudSync?.isLoggedIn) {
+      await window.CloudSync.createShareLink(p);
+    }
+    this.state.handoverProfileId = null;
+    const toastMsg = (this.data.settings.lang==='zh' ? '🎉 世代傳承寄語已保存並發行傳承碼！' : '🎉 世代継承メッセージを保存し、コードを発行しました！');
+    this.showToast(toastMsg, 'success', 4000);
+    this.render();
+  },
+
+  openInheritModal() {
+    this.state.showInheritModal = true;
+    this.render();
+  },
+
+  closeInheritModal() {
+    this.state.showInheritModal = false;
+    this.render();
+  },
+
+  async claimInheritedProfile(code, isIndependent) {
+    if (!code || !code.trim()) {
+      this.showAlert(this.data.settings.lang==='zh' ? "請輸入父母給您的傳承碼！" : "継承コードを入力してください。");
+      return;
+    }
+    const cleanCode = code.trim().toUpperCase();
+    
+    // 優先在本地尋找是否已有該傳承碼檔案
+    let foundProfile = Object.values(this.data.profiles).find(p => (p.shareCode || '').toUpperCase() === cleanCode);
+    
+    // 若本地無，且雲端已登入，嘗試自雲端拉取
+    if (!foundProfile && window.CloudSync?.isLoggedIn) {
+      this.state.dialog = { type: 'loading', message: `傳承代碼【${cleanCode}】照合中...` };
+      this.render();
+      const res = await window.CloudSync.fetchSharedProfile(cleanCode);
+      this.state.dialog = null;
+      if (res.success && res.data) {
+        const newId = 'inherited_' + Date.now();
+        this.data.profiles[newId] = {
+          ...res.data,
+          id: newId,
+          shareCode: cleanCode
+        };
+        foundProfile = this.data.profiles[newId];
+      }
+    }
+
+    if (!foundProfile) {
+      this.showAlert(this.data.settings.lang==='zh' ? "找不到對應的傳承檔案。請確認代碼是否正確，或先在雲端登入以利跨裝置接收。" : "該当する継承データが見つかりませんでした。コードをご確認いただくか、Google連携をお試しください。");
+      return;
+    }
+
+    // 標記為本人已正式獨立繼承的成年檔案
+    foundProfile.role = 'claimed_adult';
+    foundProfile.isClaimed = true;
+    foundProfile.inheritedAt = Date.now();
+    foundProfile.claimedAsSelf = true;
+
+    if (isIndependent) {
+      this.data.settings.mainProfileId = foundProfile.id;
+    }
+    this.state.activeProfileId = foundProfile.id;
+    this.state.loginProfileId = foundProfile.id;
+    this.state.showInheritModal = false;
+    this.state.view = 'app';
+    this.saveData();
+
+    if (window.CloudSync?.listenToSharedProfiles) {
+      window.CloudSync.listenToSharedProfiles();
+    }
+
+    this.showToast(this.t('handoverSuccessToast'), 'success', 5000);
+    this.render();
+  },
+
   /* === 遊客本機資料復原/匯出 === */
   exportLocalData() {
     const blob = new Blob([JSON.stringify(this.data)], { type: "application/json" });
@@ -1210,8 +1726,7 @@ const App = {
 
   async generateSkillTree() {
       const rawKey = this.getGeminiKey();
-      const apiKey = rawKey.trim();
-      if (!apiKey) { this.showAlert("先に下の入力欄にGoogle Gemini API Keyを設定してください。"); return; }
+      const apiKey = rawKey ? rawKey.trim() : '';
       
       this.state.skillTreeGenerating = true; 
       
@@ -1290,65 +1805,91 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
 ノード数は8〜15個程度にし、論理的にedgesで繋いでください。`;
 
       try {
-          const candidateModels = [
-              this.getGeminiModel(),
-              'gemini-3.6-flash',
-              'gemini-3.7-flash',
-              'gemini-2.5-flash',
-              'gemini-1.5-flash',
-              'gemini-1.5-pro'
-          ];
-          const modelsToTry = [...new Set(candidateModels.filter(Boolean))];
-          
           let lastError = null;
           let treeData = null;
           let successfulModel = null;
 
-          for (const modelName of modelsToTry) {
-              try {
-                  console.log(`[AI Skill Tree] Trying model: ${modelName}...`);
-                  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
-                      method: 'POST',
-                      headers: { 
-                          'Content-Type': 'application/json',
-                          'X-goog-api-key': apiKey
-                      },
-                      body: JSON.stringify({ 
-                          contents: [{ parts: [{ text: prompt }] }], 
-                          generationConfig: { responseMimeType: "application/json" } 
-                      })
-                  });
-                  
-                  const result = await resp.json();
-                  if (!resp.ok) {
-                      const errDetail = result.error?.message || `HTTP ${resp.status} Error`;
-                      lastError = new Error(`[${modelName}] ${errDetail}`);
-                      console.warn(`[AI Skill Tree] Model ${modelName} failed:`, errDetail);
-                      continue; // 嘗試下一個備援模型
+          // 1. Try server-side API proxy first (using server GEMINI_API_KEY)
+          try {
+              const serverResp = await fetch('/api/skill-tree', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      prompt: prompt,
+                      model: this.getGeminiModel(),
+                      apiKey: apiKey || undefined
+                  })
+              });
+              if (serverResp.ok) {
+                  const serverJson = await serverResp.json();
+                  if (serverJson.success && serverJson.treeData) {
+                      treeData = serverJson.treeData;
+                      successfulModel = serverJson.modelUsed || 'Gemini Server';
                   }
-                  
-                  if (!result.candidates || result.candidates.length === 0) {
-                      lastError = new Error(`[${modelName}] API はコンテンツを返しませんでした。`);
-                      continue;
+              } else {
+                  const errJson = await serverResp.json().catch(() => ({}));
+                  if (errJson.error) {
+                      lastError = new Error(errJson.error);
                   }
+              }
+          } catch (srvErr) {
+              console.warn('[AI Skill Tree] Server API route unavailable, checking client fallback...', srvErr);
+          }
 
-                  let rawText = result.candidates[0].content.parts[0].text.trim();
-                  // 去除可能夾帶的 ```json ``` 區塊
-                  if (rawText.startsWith('```')) {
-                      rawText = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
-                  }
+          // 2. Client fallback if user provided direct key and server didn't succeed
+          if (!treeData && apiKey) {
+              const candidateModels = [
+                  this.getGeminiModel(),
+                  'gemini-2.5-flash',
+                  'gemini-1.5-flash',
+                  'gemini-2.0-flash'
+              ];
+              const modelsToTry = [...new Set(candidateModels.filter(Boolean))];
+              
+              for (const modelName of modelsToTry) {
+                  try {
+                      console.log(`[AI Skill Tree] Trying client direct model: ${modelName}...`);
+                      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
+                          method: 'POST',
+                          headers: { 
+                              'Content-Type': 'application/json',
+                              'X-goog-api-key': apiKey
+                          },
+                          body: JSON.stringify({ 
+                              contents: [{ parts: [{ text: prompt }] }], 
+                              generationConfig: { responseMimeType: "application/json" } 
+                          })
+                      });
+                      
+                      const result = await resp.json();
+                      if (!resp.ok) {
+                          const errDetail = result.error?.message || `HTTP ${resp.status} Error`;
+                          lastError = new Error(`[${modelName}] ${errDetail}`);
+                          continue;
+                      }
+                      
+                      if (!result.candidates || result.candidates.length === 0) {
+                          lastError = new Error(`[${modelName}] API はコンテンツを返しませんでした。`);
+                          continue;
+                      }
 
-                  treeData = JSON.parse(rawText);
-                  successfulModel = modelName;
-                  break; // 成功取得並解析資料，跳出迴圈
-              } catch(modelErr) {
-                  lastError = modelErr;
-                  console.warn(`[AI Skill Tree] Attempt with ${modelName} failed:`, modelErr.message);
+                      let rawText = result.candidates[0].content.parts[0].text.trim();
+                      if (rawText.startsWith('```')) {
+                          rawText = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+                      }
+
+                      treeData = JSON.parse(rawText);
+                      successfulModel = modelName;
+                      break;
+                  } catch(modelErr) {
+                      lastError = modelErr;
+                      console.warn(`[AI Skill Tree] Attempt with ${modelName} failed:`, modelErr.message);
+                  }
               }
           }
 
           if (!treeData) {
-              throw lastError || new Error("すべてのAIモデルがビジー状態です。しばらく待ってから再試行してください。");
+              throw lastError || new Error("AI生成に失敗しました。サーバーの GEMINI_API_KEY 設定、または画面下の API キー設定をご確認ください。");
           }
 
           console.log(`[AI Skill Tree] Successfully generated tree using: ${successfulModel}`);
@@ -1439,22 +1980,51 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
       this.networkInstance.on("selectNode", (params) => {
           const nodeId = params.nodes[0];
           const node = nodes.get(nodeId);
-          if (node && node.color.background === '#f59e0b') {
-              App.showConfirm(`💡 未習得スキルを発見：【${node.label}】\n\nAIのアドバイス：${node.title}\n\nこのタスクを「目標・プラン」リストに追加しますか？`, () => {
-                  const p = App.getProfile();
-                  if(!p.plans) p.plans = [];
-                  p.plans.push({
-                      id: 'item_' + Date.now(),
-                      year: new Date().getFullYear(), month: new Date().getMonth() + 1,
-                      title: `[AI提案] ${node.label}`,
-                      desc: node.title,
-                      stage: '全期間共通', status: 'active', author: App.state.loginProfileId, visibility: 'visible'
-                  });
-                  App.saveData();
-                  App.showAlert("✅ 目標リストに追加しました！この目標を達成すると、スキルツリーのノードが自動的に緑色に変わります。");
-                  App.render();
-              });
+          if (!node) return;
+          const lang = App.data.settings.lang || 'zh';
+          const isAcquired = node.group === 'acquired' || node.color?.background === '#10b981';
+          const isTarget = node.group === 'target';
+
+          if (isAcquired) {
+              App.showToast(
+                  lang === 'zh' 
+                    ? `🌟 【${node.label}】：這是您已深植熟練的人生專業能力！` 
+                    : `🌟 【${node.label}】：習得済みのスキルです！さらなる高みを目指しましょう。`,
+                  'success',
+                  3000
+              );
+              return;
           }
+
+          const confirmMsg = lang === 'zh'
+              ? `💡 【AI 技能指引】：${node.label}\n\n📌 實踐建議：${node.title || '建議納入年度目標深造。'}\n\n是否立即將此項目加入您的「生涯目標・落地清單」？`
+              : `💡 【AI 推奨スキル】：${node.label}\n\n📌 詳細・指針：${node.title || 'プランへの設定を推奨します。'}\n\nこの項目を「目標・プラン」リストに追加しますか？`;
+
+          App.showConfirm(confirmMsg, () => {
+              const p = App.getProfile();
+              if(!p.plans) p.plans = [];
+              p.plans.push({
+                  id: 'item_' + Date.now(),
+                  year: new Date().getFullYear(),
+                  month: new Date().getMonth() + 1,
+                  title: `[AI 技能目標] ${node.label}`,
+                  desc: node.title || '',
+                  stage: '全期間共通',
+                  status: 'active',
+                  author: App.state.loginProfileId,
+                  visibility: 'visible',
+                  isMilestone: isTarget
+              });
+              App.saveData();
+              App.showToast(
+                  lang === 'zh'
+                    ? `🎯 已將【${node.label}】納入生涯目標！達成後將點亮技能樹。`
+                    : `🎯【${node.label}】を目標に追加しました！達成時に自動的に点灯します。`,
+                  'success',
+                  3500
+              );
+              App.render();
+          });
       });
   },
 
@@ -1471,7 +2041,11 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
       if (!this.networkInstance) return;
       const isPhysics = this.networkInstance.physics.physicsEnabled;
       this.networkInstance.setOptions({ physics: { enabled: !isPhysics } });
-      this.showAlert(!isPhysics ? "物理シミュレーションを再開しました" : "物理シミュレーションを一時停止しました");
+      const lang = this.data.settings.lang || 'zh';
+      const msg = !isPhysics
+          ? (lang === 'zh' ? '🔄 物理力導向模擬已重啟' : '物理シミュレーションを再開しました')
+          : (lang === 'zh' ? '⏸️ 物理力導向模擬已暫停鎖定' : '物理シミュレーションを一時停止しました');
+      this.showToast(msg, 'info', 2500);
   },
 
   drawRadarChart() {
@@ -1524,8 +2098,10 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
   /* === 核心渲染邏輯 === */
   render() {
     const root = document.getElementById('app-root');
-    let html = (this.state.view === 'login') ? this.templateLogin() : (this.state.view === 'preview' ? this.templatePrintPreview() : this.templateApp());
+    let html = (this.state.view === 'login') ? this.templateLogin() : (this.state.view === 'preview' ? this.templatePrintPreview() : (this.state.view === 'storybook' ? this.templateStorybook() : this.templateApp()));
     if (this.state.modalContext && this.state.view === 'app') html += this.templateModal();
+    if (this.state.handoverProfileId) html += this.templateHandoverModal();
+    if (this.state.showInheritModal) html += this.templateInheritModal();
     if (this.state.dialog) html += this.templateDialog();
     if (this.state.viewImageSrc) html += this.templateImageViewer(); 
     root.innerHTML = html;
@@ -1586,7 +2162,104 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     } else if (d.type === 'loading') {
         inputHtml = `<div class="loader-spinner"></div>`;
     }
-    return `<div class="custom-dialog-overlay"><div class="custom-dialog-box"><h3 style="white-space:pre-wrap; margin-top:0; font-size:17px; font-weight:700;">${d.message}</h3>${inputHtml}<div style="margin-top:20px;">${btns}</div></div></div>`;
+    return `<div class="custom-dialog-overlay" onclick="if(App.state.dialog && App.state.dialog.type!=='loading'){App.state.dialog=null; App.render();}"><div class="custom-dialog-box" onclick="event.stopPropagation()"><h3 style="white-space:pre-wrap; margin-top:0; font-size:17px; font-weight:700;">${d.message}</h3>${inputHtml}<div style="margin-top:20px;">${btns}</div></div></div>`;
+  },
+
+  templateHandoverModal() {
+    const childId = this.state.handoverProfileId;
+    const p = this.data.profiles[childId];
+    if (!p) { this.state.handoverProfileId = null; return ''; }
+    if (!p.shareCode) {
+      p.shareCode = 'LR-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      this.saveData();
+    }
+    const lang = this.data.settings.lang || 'zh';
+
+    return `<div class="custom-dialog-overlay" onclick="App.closeHandoverModal()">
+      <div class="custom-dialog-box" onclick="event.stopPropagation()" style="max-width:540px; text-align:left;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="margin:0; font-size:18px; font-weight:800; color:#15803d; display:flex; align-items:center; gap:8px;">
+            <span>🎁</span> ${this.t('handoverModalTitle')}
+          </h3>
+          <button class="btn btn-secondary btn-sm" onclick="App.closeHandoverModal()">×</button>
+        </div>
+        
+        <p style="font-size:13px; color:#475569; line-height:1.55; margin-bottom:16px;">
+          ${this.t('handoverModalDesc')}
+        </p>
+
+        <!-- Golden Handover Code Banner -->
+        <div style="background:linear-gradient(135deg, #f0fdf4, #dcfce7); border:2px dashed #16a34a; border-radius:10px; padding:16px; text-align:center; margin-bottom:16px;">
+          <div style="font-size:11px; font-weight:800; letter-spacing:1.5px; color:#166534; text-transform:uppercase;">
+            ${(lang==='zh'?'專屬世代傳承金鑰 (代碼)':'専用・世代継承コード')}
+          </div>
+          <div style="font-size:32px; font-weight:900; letter-spacing:6px; color:#0f172a; margin:8px 0;" id="handover-code-display">
+            ${p.shareCode}
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${p.shareCode}'); App.showToast(App.t('toastCopied'), 'success');">
+            📋 ${(lang==='zh'?'複製傳承代碼':'コードをコピー')}
+          </button>
+        </div>
+
+        <!-- Blessing Letter from Parent -->
+        <label style="font-size:12.5px; font-weight:700; color:#334155; display:block; margin-bottom:6px;">
+          ✍️ ${this.t('handoverBlessingPrompt')}
+        </label>
+        <textarea id="handover-blessing-text" rows="4" style="width:100%; box-sizing:border-box; padding:10px; border-radius:8px; border:1px solid var(--border); font-size:13.5px; line-height:1.5; margin-bottom:16px;" placeholder="${this.t('handoverBlessingPlaceholder')}">${p.blessingLetter || ''}</textarea>
+
+        <!-- Instructions for Child -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; font-size:12px; color:#64748b; line-height:1.6; margin-bottom:18px;">
+          <div style="font-weight:700; color:#334155; margin-bottom:4px;">💡 ${(lang==='zh'?'世代交接 3 步驟：':'世代継承の3ステップ：')}</div>
+          1. ${(lang==='zh'?'點擊下方「保存寄語並確認交接」以紀錄並發行傳承碼。':'下記の「祝福を保存して発行」をクリック')}
+          <br>2. ${(lang==='zh'?'將上方「傳承碼」傳送給孩子。':'上の「継承コード」をお子様に渡す')}
+          <br>3. ${(lang==='zh'?'孩子在自己的手機或瀏覽器登入頁，點選「🌱 繼承人生檔案」輸入代碼，即可正式接棒獨立掌管！':'お子様が自身の端末のログイン画面で「🌱 人生履歴書を継承する」を選びコードを入力するだけで完了！')}
+        </div>
+
+        <div class="grid-2">
+          <button class="btn btn-secondary btn-full" onclick="App.closeHandoverModal()">${this.t('modalCancel')}</button>
+          <button class="btn btn-success btn-full" style="background:linear-gradient(135deg, #16a34a, #15803d); font-weight:700;" onclick="App.saveHandoverBlessing('${childId}')">
+            💾 ${(lang==='zh'?'保存寄語並確認交接':'祝福を保存して完了')}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  },
+
+  templateInheritModal() {
+    const lang = this.data.settings.lang || 'zh';
+    return `<div class="custom-dialog-overlay" onclick="App.closeInheritModal()">
+      <div class="custom-dialog-box" onclick="event.stopPropagation()" style="max-width:500px; text-align:left;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="margin:0; font-size:18px; font-weight:800; color:#15803d; display:flex; align-items:center; gap:8px;">
+            <span>🌱</span> ${this.t('inheritCardTitle')}
+          </h3>
+          <button class="btn btn-secondary btn-sm" onclick="App.closeInheritModal()">×</button>
+        </div>
+
+        <p style="font-size:13px; color:#475569; line-height:1.55; margin-bottom:16px;">
+          ${this.t('inheritCardDesc')}
+        </p>
+
+        <label style="font-size:12.5px; font-weight:700; color:#334155; display:block; margin-bottom:6px;">
+          🔑 ${(lang==='zh'?'請輸入父母提供的傳承代碼 (例: LR-ABC123)':'親御様から受け取った継承コード (例: LR-ABC123)')}
+        </label>
+        <input type="text" id="inherit-code-input" placeholder="LR-XXXXXX" style="width:100%; box-sizing:border-box; padding:12px; font-size:18px; font-weight:800; text-align:center; letter-spacing:3px; margin-bottom:16px; border:2px solid #16a34a; border-radius:8px;">
+
+        <div style="margin-bottom:18px; padding:12px 14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; display:flex; align-items:center; gap:10px;">
+          <input type="checkbox" id="inherit-independent-check" checked style="width:18px; height:18px; margin:0; cursor:pointer;">
+          <label for="inherit-independent-check" style="font-size:13px; font-weight:700; color:#15803d; cursor:pointer; margin:0; line-height:1.4;">
+            ${(lang==='zh'?'我是本人，正式接棒並設為我的主要獨立身分 (Main Profile)':'本人として正式に人生履歴書を引き継ぎ、メインプロフィールにする')}
+          </label>
+        </div>
+
+        <div class="grid-2">
+          <button class="btn btn-secondary btn-full" onclick="App.closeInheritModal()">${this.t('modalCancel')}</button>
+          <button class="btn btn-success btn-full" style="background:linear-gradient(135deg, #16a34a, #15803d); font-weight:700;" onclick="App.claimInheritedProfile(document.getElementById('inherit-code-input').value, document.getElementById('inherit-independent-check').checked)">
+            🎉 ${(lang==='zh'?'正式接棒繼承':'正式に継承する')}
+          </button>
+        </div>
+      </div>
+    </div>`;
   },
 
   templateLogin() {
@@ -1616,7 +2289,19 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         <h2 style="font-weight:800; color:var(--primary-dark); margin-top:0; margin-bottom:6px; letter-spacing:-0.02em;">${this.t('appTitle')}</h2>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:24px; font-weight:600;">V3.0 Pro PWA Edition</div>
         ${loginBtns}
-        <div style="margin-top:28px; border-top:1px dashed var(--border); padding-top:20px;">
+        <div style="margin-top:16px; background:linear-gradient(135deg, #f0fdf4, #dcfce7); border:1.5px dashed #16a34a; border-radius:var(--radius-sm); padding:16px; text-align:left;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <span style="font-size:20px;">🌱</span>
+            <span style="font-weight:800; font-size:14px; color:#15803d;">${this.t('inheritCardTitle')}</span>
+          </div>
+          <p style="font-size:12px; color:#166534; line-height:1.5; margin-bottom:12px;">
+            ${this.t('inheritCardDesc')}
+          </p>
+          <button class="btn btn-success btn-full btn-sm" style="background:linear-gradient(135deg, #16a34a, #15803d); font-weight:700; padding:10px;" onclick="App.openInheritModal()">
+            🎁 ${(this.data.settings.lang==='zh'?'輸入傳承碼・正式獨立接棒':'継承コードを入力して受け取る')}
+          </button>
+        </div>
+        <div style="margin-top:24px; border-top:1px dashed var(--border); padding-top:18px;">
           <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; font-weight:500;">オフライン・データ移行</p>
           <button class="btn btn-secondary btn-full btn-sm" onclick="document.getElementById('login-import-json').click()">📁 ローカルデータを復元 (.json)</button>
           <input type="file" id="login-import-json" class="hidden" accept=".json" onchange="App.importLocalData(event)">
@@ -1627,15 +2312,16 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     const prof = this.data.profiles[targetId];
     if (!prof) { this.state.loginProfileId = ''; return ''; }
 
-    if (!prof.password) {
+    const hasPassword = (prof.passwordHash || prof.password || '').trim();
+    if (!hasPassword) {
         setTimeout(() => App.executeLogin(), 0);
         return `<div class="overlay"><div class="loader-spinner"></div></div>`;
     }
     
-    return `<div class="overlay"><div class="dialog-box" style="text-align:center;">
+    return `<div class="overlay" onclick="App.state.loginProfileId=''; App.render();"><div class="dialog-box" onclick="event.stopPropagation()" style="text-align:center;">
     <h3 style="font-weight:700; margin-top:0;">${prof.name} の認証</h3>
-    <p style="font-size:13px; color:var(--text-sub); margin-bottom:16px;">設定したパスワードを入力してください</p>
-    <input type="password" id="login-pwd" placeholder="パスワードを入力" style="text-align:center; margin-bottom:16px; font-size:16px; letter-spacing:4px;">
+    <p style="font-size:13px; color:var(--text-sub); margin-bottom:16px;">設定したパスワードを入力してください (SHA-256 加塩検証)</p>
+    <input type="password" id="login-pwd" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter') App.executeLogin()" style="text-align:center; margin-bottom:16px; font-size:16px; letter-spacing:4px;">
     <div class="grid-2">
     <button class="btn btn-secondary btn-full" onclick="App.state.loginProfileId=''; App.render()">戻る</button>
     <button class="btn btn-primary btn-full" onclick="App.executeLogin()">ログイン</button>
@@ -1727,6 +2413,51 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
           <div class="progress-bar-fill" style="width:${lifePct}%;"></div>
         </div>
       </div>
+
+      <!-- LIFE MOTTO & BELIEF BANNER -->
+      <div class="card" style="margin-bottom:16px; padding:14px 18px; background:linear-gradient(135deg, #ffffff, #f8fafc); border-left:4px solid var(--primary); display:flex; justify-content:space-between; align-items:center; gap:16px; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:11px; font-weight:800; color:var(--text-sub); letter-spacing:0.5px;">${this.t('mottoLabel')}</div>
+          <div style="font-size:14.5px; font-weight:700; color:var(--text-main); margin-top:3px; font-style:italic; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${b.motto ? `“${b.motto}”` : `<span style="font-style:normal; font-weight:400; color:#94a3b8; font-size:13px; cursor:pointer;" onclick="App.changeTab('basic')">${this.t('mottoPrompt')}</span>`}
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" title="${this.t('mottoLabel')}" onclick="App.changeTab('basic')" style="padding:4px 10px; font-size:12px; flex-shrink:0;">✏️</button>
+      </div>
+
+      <!-- GENERATIONAL INHERITANCE BANNER (IF INHERITED PROFILE) -->
+      ${(p.role === 'claimed_adult' || p.inheritedAt || p.claimedAsSelf) ? `
+      <div class="card" style="margin-bottom:16px; padding:16px 20px; background:linear-gradient(135deg, #fffbeb, #fef3c7); border:1.5px solid #fde68a; border-radius:var(--radius-sm); box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+        <div style="display:flex; align-items:flex-start; gap:14px;">
+          <span style="font-size:30px; line-height:1;">🕊️</span>
+          <div style="flex:1;">
+            <div style="font-weight:800; font-size:14.5px; color:#92400e; margin-bottom:4px;">${this.t('generationalBannerTitle')}</div>
+            <div style="font-size:12.5px; color:#78350f; line-height:1.6;">
+              ${(this.data.settings.lang==='zh' ? `這份人生履歷由父母在您成長初期悉心記錄（累積 <b>${p.history.length}</b> 筆求學歷程、<b>${p.achievements.length}</b> 筆成長榮耀與父母一生的期待）。今天您已正式接棒主導人生，請在愛的基石上，自主開拓屬於您的輝煌篇章！` : `この人生履歴書は、ご両親があなたの誕生から大切に紡いできた無二の成長資産です（学歴 <b>${p.history.length}</b> 件、実績 <b>${p.achievements.length}</b> 件、親御様の願いを収録）。今日からはあなたが人生の主人公です。自立した未来を力強く描いてください！`)}
+            </div>
+            ${p.blessingLetter ? `
+              <div style="margin-top:10px; padding:10px 14px; background:rgba(255,255,255,0.85); border-radius:6px; border-left:4px solid #d97706; font-style:italic; font-size:13px; color:#78350f; line-height:1.5;">
+                “${p.blessingLetter}” <div style="font-size:11px; font-weight:700; color:#b45309; text-align:right; margin-top:4px;">— 父母親筆成人寄語</div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>` : ''}
+
+      <!-- HANDOVER ACTION BANNER (IF PARENT VIEWING CHILD PROFILE) -->
+      ${(p.id !== this.data.settings.mainProfileId && (p.role === 'child' || !p.isClaimed)) ? `
+      <div class="card" style="margin-bottom:16px; padding:14px 18px; background:linear-gradient(135deg, #f0fdf4, #dcfce7); border:1.5px solid #86efac; border-radius:var(--radius-sm); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-size:26px;">🎁</span>
+          <div>
+            <div style="font-weight:800; font-size:14px; color:#15803d;">${(this.data.settings.lang==='zh'?'世代傳承・將人生履歷交接給孩子獨立管理':'世代継承・お子様へ人生履歴書を引き渡す')}</div>
+            <div style="font-size:12px; color:#166534;">${(this.data.settings.lang==='zh'?'當孩子長大成人，一鍵生成傳承碼與寄語信，讓孩子接棒這份成長資產。':'誕生からの全記録を専用コードでお子様本人へ引き渡し、独立した人生管理を始めさせます。')}</div>
+          </div>
+        </div>
+        <button class="btn btn-success btn-sm" style="background:linear-gradient(135deg, #16a34a, #15803d); font-weight:700; padding:8px 14px;" onclick="App.openHandoverModal('${p.id}')">
+          🎁 ${(this.data.settings.lang==='zh'?'進行世代交接儀式':'継承の儀を行う')}
+        </button>
+      </div>` : ''}
 
       <!-- MODERN SEGMENTED TABS (完全修復切邊) -->
       <div class="tabs-wrapper">
@@ -1842,11 +2573,12 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
 
       items.forEach(i => {
         const titleDecor = i.status === 'completed' ? ` <span class="badge-success">${(this.data.settings.lang==='zh'?'已達成':'達成済')}</span>` : '';
+        const milestoneBadge = i.isMilestone ? ` <span class="milestone-badge">⭐ ${(this.data.settings.lang==='zh'?'關鍵里程碑':'重要マイルストーン')}</span>` : '';
         const dateStr = i.displayDate ? i.displayDate.replace(/-/g, '/') : `${i.year||'?'}年${i.month?i.month+'月':''}`;
         const titleFontSize = i.catLabel === 'メモ' || i.catLabel === '筆記' ? '14px' : '16px';
         const titleFontWeight = i.catLabel === 'メモ' || i.catLabel === '筆記' ? '500' : '700';
 
-        html += `<div class="tl-container ${i.isPlan?'tl-right':'tl-left'}"><div class="tl-dot" style="border-color: ${i.color};"></div><div class="tl-content" style="border-${i.isPlan?'left':'right'}:4px solid ${i.color};"><div style="font-size:11px; font-weight:700; color:var(--text-sub);"><span class="tag" style="background:${i.color}">${i.catLabel}</span> ${dateStr}</div><div style="font-weight:${titleFontWeight}; font-size:${titleFontSize}; margin-top:6px; white-space:pre-wrap;">${i.title} ${i.eduStatus?`[${i.eduStatus}]`:''} ${titleDecor}</div>${i.desc?`<div style="font-size:12.5px; color:var(--text-sub); margin-top:6px; line-height:1.4;">${i.desc}</div>`:''}${i.photo?`<img src="${i.photo}" style="width:100%; max-width:200px; margin-top:10px; border-radius:8px; cursor:zoom-in; border:1px solid #e2e8f0;" onclick="App.viewImage('${i.photo}')">`:''}</div></div>`;
+        html += `<div class="tl-container ${i.isPlan?'tl-right':'tl-left'}"><div class="tl-dot" style="border-color: ${i.color};"></div><div class="tl-content ${i.isMilestone?'is-milestone':''}" style="border-${i.isPlan?'left':'right'}:4px solid ${i.color};"><div style="font-size:11px; font-weight:700; color:var(--text-sub); display:flex; align-items:center; gap:6px; flex-wrap:wrap;"><span class="tag" style="background:${i.color}">${i.catLabel}</span> ${dateStr} ${milestoneBadge}</div><div style="font-weight:${titleFontWeight}; font-size:${titleFontSize}; margin-top:6px; white-space:pre-wrap;">${i.title} ${i.eduStatus?`[${i.eduStatus}]`:''} ${titleDecor}</div>${i.desc?`<div style="font-size:12.5px; color:var(--text-sub); margin-top:6px; line-height:1.4;">${i.desc}</div>`:''}${i.photo?`<img src="${i.photo}" style="width:100%; max-width:200px; margin-top:10px; border-radius:8px; cursor:zoom-in; border:1px solid #e2e8f0;" onclick="App.viewImage('${i.photo}')">`:''}</div></div>`;
       });
       return html + `</div></div>`;
     }
@@ -1860,6 +2592,10 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
       <div style="margin-top:20px; border-top:1px dashed var(--border); padding-top:20px;"></div>
       <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">連絡先 郵便番号 (現住所と異なる場合)</label><input type="text" value="${b.contactPostalCode||''}" onchange="App.updateBasic('contactPostalCode', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">連絡先 住所</label><input type="text" value="${b.contactAddress||''}" onchange="App.updateBasic('contactAddress', this.value)" ${isReadOnly ? 'disabled' : ''}></div></div>
       <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">連絡先 電話番号</label><input type="text" value="${b.contactPhone||''}" onchange="App.updateBasic('contactPhone', this.value)" ${isReadOnly ? 'disabled' : ''}></div><div></div></div>
+      <div style="margin-top:16px; border-top:1px dashed var(--border); padding-top:16px;">
+        <label style="font-size:12px; font-weight:700; color:var(--text-sub);">${this.t('mottoLabel')}</label>
+        <input type="text" value="${b.motto||''}" placeholder="${this.t('mottoPlaceholder')}" onchange="App.updateBasic('motto', this.value)" ${isReadOnly ? 'disabled' : ''}>
+      </div>
       </div>`;
     }
 
@@ -1886,7 +2622,8 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
                     const visibilityBtn = isOwner ? `<button class="btn ${i.visibility === 'visible' ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="event.stopPropagation(); App.toggleVisibility('plans','${i.id}')">${i.visibility === 'visible' ? '🔓 公開中' : '🔒 非公開'}</button>` : '';
                     const titleUI = isCompleted ? `<span class="badge-success">${(this.data.settings.lang==='zh'?'已達成':'達成済')}</span> <strike style="color:#94a3b8;">${i.title}</strike>` : i.title;
 
-                    return `<div class="list-item"><div class="item-content" ${canEdit?`onclick="App.openModal('plans','${i.id}')"`:''}><div class="item-meta">${i.year}年 <span class="tag" style="background:#64748b;">${i.stage}</span></div><div class="item-title">${titleUI}</div><div class="item-desc">${i.desc||''}</div></div><div style="display:flex; flex-direction:column; gap:6px; min-width:80px;">${visibilityBtn}${compBtn}${canEdit?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('plans','${i.id}')">削除</button>`:''}</div></div>`;
+                    const milestoneBadge = i.isMilestone ? ` <span class="milestone-badge">⭐ ${(this.data.settings.lang==='zh'?'關鍵里程碑':'重要マイルストーン')}</span>` : '';
+                    return `<div class="list-item ${i.isMilestone ? 'is-milestone' : ''}"><div class="item-content" ${canEdit?`onclick="App.openModal('plans','${i.id}')"`:''}><div class="item-meta" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;"><span>${i.year}年</span> <span class="tag" style="background:#64748b;">${i.stage}</span> ${milestoneBadge}</div><div class="item-title">${titleUI}</div><div class="item-desc">${i.desc||''}</div></div><div style="display:flex; flex-direction:column; gap:6px; min-width:80px;">${visibilityBtn}${compBtn}${canEdit?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('plans','${i.id}')">削除</button>`:''}</div></div>`;
                 }
                 return `<div class="list-item" style="align-items:center;"><div><span class="tag" style="background:#64748b;">${i.stage}</span> 🔒 内容非公開</div> <button class="btn btn-primary btn-sm" onclick="App.requestAccess('plans','${i.id}')">${i.visibility==='requested'?'要請中':'表示要請'}</button></div>`;
             }).join('');
@@ -1894,9 +2631,10 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
 
         let myTitle = ''; let otherTitle = '';
         let showAddMy = false;
+        const isClaimedAdult = (p.role === 'claimed_adult' || p.inheritedAt || p.claimedAsSelf);
         if (p.id === myId) {
-            myTitle = this.t('myPlansTitle');
-            otherTitle = this.t('parentExpectTitle'); 
+            myTitle = isClaimedAdult ? this.t('childGoalsTitle') : this.t('myPlansTitle');
+            otherTitle = isClaimedAdult ? this.t('parentHopesTitle') : this.t('parentExpectTitle'); 
             showAddMy = true;
         } else {
             myTitle = this.t('myExpectToChildTitle'); 
@@ -1981,6 +2719,18 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
       const maxRowsNotice = (hCount > 20) ? `<div style="color:var(--danger); font-size:11px; margin-top:4px;">⚠️ 学歴・職歴が多いため（${hCount}件）、JIS印刷時に22行を超えた分は省略されます。チェックを外して調整してください。</div>` : '';
 
       return `
+        <div class="card" style="border-top:4px solid #16a34a; background:linear-gradient(135deg, #ffffff, #f0fdf4);">
+          <div class="card-title"><span style="color:#15803d;">🎁 ${(this.data.settings.lang==='zh'?'世代傳承・將人生履歷交接給孩子獨立掌管':'世代継承・お子様への人生履歴書引き渡し')}</span></div>
+          <p style="font-size:12.5px; color:#166534; line-height:1.55;">
+            ${(this.data.settings.lang==='zh'?'父母記錄的成長起點是孩子一生的基石。透過「世代傳承儀式」生成專屬傳承金鑰，並親筆寫下成年祝福信，讓孩子在自己的手機/電腦上成為獨立掌管者！':'幼少期からの全記録をお子様本人へ託し、自立した人生管理をスタートさせます。専用コードとお祝いの手紙を添えて、世代を繋ぐバトンタッチを行います。')}
+          </p>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+            <button class="btn btn-success" style="background:linear-gradient(135deg, #16a34a, #15803d); font-weight:700;" onclick="App.openHandoverModal('${p.id}')">
+              🎁 ${(this.data.settings.lang==='zh'?'開啟世代交接嚮導・發行傳承碼':'世代継承ウィザードを開く')}
+            </button>
+          </div>
+        </div>
+
         <div class="card" style="border-top:4px solid var(--primary);">
           <div class="card-title"><span>🤝 ${(this.data.settings.lang==='zh'?'家族共享・即時共同編輯':'家族共有・リアルタイム共同編集')}</span></div>
           <p style="font-size:12.5px; color:var(--text-sub);">${(this.data.settings.lang==='zh'?'發行專屬共享碼，可與其他 Google 帳號即時雙向同步。':'共有コードを発行し、他の家族のGoogleアカウントへデータを転送・共有できます。')}</p>
@@ -1995,10 +2745,12 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         </div>
 
         <div class="card">
-          <div class="card-title"><span>🔐 ${p.name} ${(this.data.settings.lang==='zh'?'專屬密碼鎖設定':'専用パスワード設定')}</span></div>
-          <p style="font-size:12.5px; color:var(--text-sub);">${(this.data.settings.lang==='zh'?'此身份的專屬密碼，留空則無需驗證即可切換。':'このプロフィール専用のパスワードです。空欄にすると認証なしでログインできます。')}</p>
-          <div class="grid-2"><input type="password" id="profile-pwd" placeholder="新パスワードを入力" value="${p.password||''}" style="margin-bottom:0;">
-          <button class="btn btn-primary" onclick="const v=document.getElementById('profile-pwd').value; App.getProfile().password=v; App.saveData(); App.showAlert('パスワードを更新しました。');">パスワードを更新</button></div>
+          <div class="card-title"><span>🔐 ${p.name} ${(this.data.settings.lang==='zh'?'專屬密碼鎖設定 (SHA-256 加鹽保護)':'専用パスワード設定 (SHA-256 加塩保護)')}</span></div>
+          <p style="font-size:12.5px; color:var(--text-sub);">${(this.data.settings.lang==='zh'?'此身份專屬密碼。採用 Web Crypto SHA-256 + Salt 單向雜湊，零敏感明文上雲。留空則無需驗證即可登入。':'このプロフィール専用のパスワードです。Web Crypto SHA-256+Saltで単方向暗号化され、平文は一切保存されません。空欄にすると認証なしでログインできます。')}</p>
+          <div class="grid-2">
+            <input type="password" id="profile-pwd" placeholder="${(p.passwordHash || p.password) ? (this.data.settings.lang==='zh'?'•••••••• (已加密保護，輸入新密碼可覆蓋)':'•••••••• (暗号化保護中・変更時のみ入力)') : (this.data.settings.lang==='zh'?'輸入新密碼 (留空即解除)':'新パスワードを入力 (空欄で解除)')}" style="margin-bottom:0;">
+            <button class="btn btn-primary" onclick="App.setProfilePassword('${p.id}', document.getElementById('profile-pwd').value)">${(this.data.settings.lang==='zh'?'更新密碼 (SHA-256)':'パスワードを安全更新')}</button>
+          </div>
         </div>
         
         <div class="card" style="background:#f0fdfa; border-color:#ccfbf1;">
@@ -2043,6 +2795,12 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
           <textarea rows="3" onchange="App.updateBasic('desiredConditions', this.value)" placeholder="特になし" ${isReadOnly ? 'disabled' : ''}>${b.desiredConditions||''}</textarea>
           <button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="App.triggerPrintMode()">${this.t('jisPrintBtn')}</button>
         </div>
+
+        <div class="card" style="background:#f0fdf4; border-color:#bbf7d0;">
+          <div class="card-title"><span style="color:#15803d;">📖 ${(this.data.settings.lang==='zh'?'世代傳承・人生紀念冊 (Storybook)':'人生物語・世代継承アルバム')}</span></div>
+          <p style="font-size:12.5px; color:#166534;">${(this.data.settings.lang==='zh'?'將您一生的信念座右銘、重大里程碑、學業職場歷練、榮耀成就與家庭叮嚀，一鍵排版匯出為精美的典藏紀念冊，可直接列印或另存為 PDF 留給摯愛世代珍藏。':'人生の信条、重要マイルストーン、歩んできた軌跡や家族へのメッセージを、一冊の美しい記念アルバムとして出力します。A4印刷およびPDF保存に対応。')}</p>
+          <button class="btn btn-success btn-full" style="margin-top:8px; background:linear-gradient(135deg, #10b981, #059669); font-weight:700;" onclick="App.triggerStorybookMode()">${this.t('storybookBtn')}</button>
+        </div>
         ${p.id !== this.data.settings.mainProfileId ? `<div class="card" style="border-color:var(--danger); background:#fff1f2;"><div class="card-title"><span style="color:var(--danger);">プロフィールの削除</span></div><p style="font-size:12px;">この端末から「${p.name}」のデータを削除します。</p><button class="btn btn-danger btn-full" onclick="App.deleteProfile('${p.id}')">🗑️ このプロフィールを削除</button></div>` : ''}
         <div class="card" style="font-size:11px; color:#94a3b8; text-align:center;"><p style="margin:0;">人生履歴書 V3.0 Pro PWA Edition<br>Producer: M.K(TW)</p></div>`;
     }
@@ -2053,7 +2811,8 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     let html = `<div class="card"><div class="card-title"><span>${title}</span> ${isReadOnly ? '' : `<button class="btn btn-primary btn-sm" onclick="App.openModal('${cat}')">+</button>`}</div>`;
     if(items.length === 0) html += `<p style="font-size:13.5px; color:#94a3b8; text-align:center; padding:20px;">${(this.data.settings.lang==='zh'?'目前尚無資料':'データがありません')}</p>`;
     items.forEach(i => {
-      html += `<div class="list-item"><div class="item-content" ${isReadOnly ? '' : `onclick="App.openModal('${cat}', '${i.id}')"`}><div class="item-meta">${i.year||'?'}年 ${i.stage||''} ${i.eduStatus?`[${i.eduStatus}]`:''} ${i.dim?`[${i.dim}]`:''}</div><div class="item-title">${i.title}</div><div class="item-desc">${i.desc||''}</div></div><div class="photo-wrapper" style="position:relative;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')">${isReadOnly ? '' : `<button class="btn btn-danger btn-sm" style="position:absolute; top:-6px; right:-6px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>`}` : (isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`)}</div>${isReadOnly ? '' : `<div style="display:flex; flex-direction:column; gap:6px; min-width:60px;"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button></div>`}</div>`;
+      const milestoneBadge = i.isMilestone ? ` <span class="milestone-badge">⭐ ${(this.data.settings.lang==='zh'?'關鍵里程碑':'重要マイルストーン')}</span>` : '';
+      html += `<div class="list-item ${i.isMilestone ? 'is-milestone' : ''}"><div class="item-content" ${isReadOnly ? '' : `onclick="App.openModal('${cat}', '${i.id}')"`}><div class="item-meta" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;"><span>${i.year||'?'}年 ${i.stage||''} ${i.eduStatus?`[${i.eduStatus}]`:''} ${i.dim?`[${i.dim}]`:''}</span> ${milestoneBadge}</div><div class="item-title">${i.title}</div><div class="item-desc">${i.desc||''}</div></div><div class="photo-wrapper" style="position:relative;">${i.photo ? `<img src="${i.photo}" class="photo-thumb" onclick="event.stopPropagation(); App.viewImage('${i.photo}')">${isReadOnly ? '' : `<button class="btn btn-danger btn-sm" style="position:absolute; top:-6px; right:-6px; padding:2px 6px; font-size:10px; border-radius:50%;" onclick="event.stopPropagation(); App.deleteItemPhoto('${cat}','${i.id}')">×</button>`}` : (isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); App.uploadPhoto('item','${cat}','${i.id}')">📷</button>`)}</div>${isReadOnly ? '' : `<div style="display:flex; flex-direction:column; gap:6px; min-width:60px;"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); App.deleteItem('${cat}','${i.id}')">削除</button></div>`}</div>`;
     });
     if(cat === 'skills') html += `<div style="margin-top:16px;"><label style="font-size:12px; font-weight:700; color:var(--text-sub);">志望の動機、特技、アピールポイントなど / 自我推薦與動機</label><textarea rows="3" onchange="App.updateBasic('motivation', this.value)" placeholder="自己PRや志望動機などを入力" ${isReadOnly ? 'disabled' : ''}>${this.getProfile().basic.motivation||''}</textarea></div>`;
     return html + `</div>`;
@@ -2096,7 +2855,7 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     
     if (ctx.category === 'diary') {
         const todayStr = this.getLocalTodayString();
-        return `<div class="modal-overlay overlay"><div class="modal-box"><h3 style="font-weight:700; margin-top:0;">${isNew?'📝 メモ・日記を追加':'編集'}</h3>
+        return `<div class="modal-overlay overlay" onclick="App.closeModal()"><div class="modal-box" onclick="event.stopPropagation()"><h3 style="font-weight:700; margin-top:0;">${isNew?'📝 メモ・日記を追加':'編集'}</h3>
         <label style="font-size:12px; font-weight:700; color:var(--text-sub);">日付</label><input type="date" id="mod-date" value="${item.date || todayStr}">
         <label style="font-size:12px; font-weight:700; color:var(--text-sub);">公開設定</label><select id="mod-visibility"><option value="hidden" ${item.visibility==='hidden'?'selected':''}>🔒 非公開 (自分のみ)</option><option value="visible" ${item.visibility==='visible'||isNew?'selected':''}>🔓 公開 (共有相手も閲覧可)</option></select>
         <label style="font-size:12px; font-weight:700; color:var(--text-sub);">内容 (格言・一言など)</label><textarea id="mod-title" rows="4" placeholder="今日事今日畢">${item.title||''}</textarea>
@@ -2107,14 +2866,23 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     const stageOptions = STAGES.map(s => `<option value="${s}" ${item.stage===s?'selected':''}>${s}</option>`).join('');
     const dimOptions = SKILL_DIMS.map(s => `<option value="${s}" ${item.dim===s?'selected':''}>${s}</option>`).join('');
     
-    return `<div class="modal-overlay overlay"><div class="modal-box"><h3 style="font-weight:700; margin-top:0;">${isNew?'新規追加':'編集'}</h3>
-    <label style="font-size:12px; font-weight:700; color:var(--text-sub);">ライフステージ</label><select id="mod-stage">${stageOptions}</select>
+    return `<div class="modal-overlay overlay" onclick="App.closeModal()"><div class="modal-box" onclick="event.stopPropagation()"><h3 style="font-weight:700; margin-top:0;">${isNew ? this.t('modalNew') : this.t('modalEdit')}</h3>
+    <label style="font-size:12px; font-weight:700; color:var(--text-sub);">${this.t('modalStage')}</label><select id="mod-stage">${stageOptions}</select>
     ${isEdu ? `<label style="font-size:12px; font-weight:700; color:var(--text-sub);">区分・状態 (学歴・職歴)</label><select id="mod-edu-status"><optgroup label="学歴"><option value="入学" ${item.eduStatus==='入学'?'selected':''}>入学</option><option value="卒業" ${item.eduStatus==='卒業'?'selected':''}>卒業</option><option value="卒業見込み" ${item.eduStatus==='卒業見込み'?'selected':''}>卒業見込み</option><option value="中退" ${item.eduStatus==='中退'?'selected':''}>中退</option></optgroup><optgroup label="職歴"><option value="入社" ${item.eduStatus==='入社'?'selected':''}>入社</option><option value="退社" ${item.eduStatus==='退社'?'selected':''}>退社</option><option value="現在に至る" ${item.eduStatus==='現在に至る'?'selected':''}>現在に至る</option><option value="" ${!item.eduStatus?'selected':''}>その他 (状態なし)</option></optgroup></select>` : ''}
     ${isSkill ? `<label style="font-size:12px; font-weight:700; color:var(--text-sub);">能力カテゴリー (レーダーチャート用)</label><select id="mod-skill-dim">${dimOptions}</select>` : ''}
-    ${isPlan ? `<label style="font-size:12px; font-weight:700; color:var(--text-sub);">公開設定</label><select id="mod-visibility"><option value="hidden" ${item.visibility==='hidden'?'selected':''}>🔒 非公開 (自分のみ)</option><option value="visible" ${item.visibility==='visible'||isNew?'selected':''}>🔓 公開 (共有相手も閲覧可)</option></select>` : ''}
-    <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">年 (西暦)</label><input type="number" id="mod-year" value="${item.year||''}" placeholder="2026" max="2100"></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">月</label><input type="number" id="mod-month" value="${item.month||''}" placeholder="4" min="1" max="12"></div></div>
-    <label style="font-size:12px; font-weight:700; color:var(--text-sub);">内容 / タイトル</label><input type="text" id="mod-title" value="${item.title||''}" placeholder="入力してください"><label style="font-size:12px; font-weight:700; color:var(--text-sub);">詳細・備考</label><textarea id="mod-desc" rows="4">${item.desc||''}</textarea>
-    <div class="grid-2" style="margin-top:10px;"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">キャンセル</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">保存</button></div></div></div>`;
+    ${isPlan ? `<label style="font-size:12px; font-weight:700; color:var(--text-sub);">${this.t('modalVisibility')}</label><select id="mod-visibility"><option value="hidden" ${item.visibility==='hidden'?'selected':''}>🔒 非公開 (自分のみ)</option><option value="visible" ${item.visibility==='visible'||isNew?'selected':''}>🔓 公開 (共有相手も閲覧可)</option></select>` : ''}
+    <div class="grid-2"><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">${this.t('modalYear')}</label><input type="number" id="mod-year" value="${item.year||''}" placeholder="2026" max="2100"></div><div><label style="font-size:12px; font-weight:700; color:var(--text-sub);">${this.t('modalMonth')}</label><input type="number" id="mod-month" value="${item.month||''}" placeholder="4" min="1" max="12"></div></div>
+    <label style="font-size:12px; font-weight:700; color:var(--text-sub);">${this.t('modalTitle')}</label><input type="text" id="mod-title" value="${item.title||''}" placeholder="${this.t('modalTitle')}"><label style="font-size:12px; font-weight:700; color:var(--text-sub);">${this.t('modalDesc')}</label><textarea id="mod-desc" rows="4">${item.desc||''}</textarea>
+    
+    <!-- MILESTONE TOGGLE (LIFE PIVOTAL MOMENTS) -->
+    <div style="margin:14px 0 10px 0; padding:10px 14px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; display:flex; align-items:center; gap:10px;">
+      <input type="checkbox" id="mod-milestone" ${item.isMilestone ? 'checked' : ''} style="width:18px; height:18px; margin:0; cursor:pointer;">
+      <label for="mod-milestone" style="font-size:13px; font-weight:700; color:#b45309; cursor:pointer; margin:0; line-height:1.3;">
+        ${this.t('milestoneToggle')}
+      </label>
+    </div>
+
+    <div class="grid-2" style="margin-top:10px;"><button class="btn btn-secondary btn-full" onclick="App.closeModal()">${this.t('modalCancel')}</button><button class="btn btn-primary btn-full" onclick="App.saveModalItem()">${this.t('modalSave')}</button></div></div></div>`;
   },
 
   triggerPrintMode() {
@@ -2127,6 +2895,14 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
     this.state.view = 'preview'; 
     this.render();
     setTimeout(() => window.print(), 800);
+  },
+
+  triggerStorybookMode() {
+    this.saveData();
+    this.trackEvent('view_storybook');
+    this.state.view = 'storybook';
+    this.render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
   templatePrintPreview() {
@@ -2266,6 +3042,236 @@ ${this.state.skillTreeMode === 'A' ? `目標逆算モード：ユーザーの最
         </table>
       </div>
     </div>`;
+  },
+
+  templateStorybook() {
+    const p = this.getProfile();
+    const b = p.basic;
+    const lang = this.data.settings.lang || 'zh';
+
+    const yyyy = new Date().getFullYear();
+    const mm = new Date().getMonth() + 1;
+    const dd = new Date().getDate();
+    let age = 0;
+    if (b.birthday) {
+        const birthDate = new Date(b.birthday);
+        age = yyyy - birthDate.getFullYear();
+        if (mm < (birthDate.getMonth() + 1) || (mm === (birthDate.getMonth() + 1) && dd < birthDate.getDate())) age--;
+    }
+
+    // Collect all items across categories
+    const allHistory = (p.history || []).map(i => ({ ...i, catType: 'history', catLabel: (lang==='zh'?'學歷・職歷':'学歴・職歴'), color: 'var(--primary)' }));
+    const allSkills = (p.skills || []).map(i => ({ ...i, catType: 'skills', catLabel: (lang==='zh'?'專業・執照':'資格・専門'), color: 'var(--skill-color)' }));
+    const allAchieve = (p.achievements || []).map(i => ({ ...i, catType: 'achievements', catLabel: (lang==='zh'?'實績・榮耀':'実績・栄誉'), color: 'var(--achieve-color)' }));
+    const allPlans = (p.plans || []).map(i => ({ ...i, catType: 'plans', catLabel: (lang==='zh'?'願景・目標':'将来プラン'), color: 'var(--plan-my)' }));
+    const allDiary = (p.diary || []).filter(i => i.visibility === 'visible' || i.author === this.state.loginProfileId);
+
+    // Milestones (Explicitly marked or high-value achievements)
+    let milestones = [
+        ...allHistory.filter(i => i.isMilestone),
+        ...allAchieve.filter(i => i.isMilestone),
+        ...allSkills.filter(i => i.isMilestone),
+        ...allPlans.filter(i => i.isMilestone)
+    ];
+
+    // Fallback: if user hasn't explicitly flagged milestones yet, surface achievements & graduation/entry
+    if (milestones.length === 0) {
+        milestones = [
+            ...allAchieve.slice(0, 4),
+            ...allHistory.filter(i => i.eduStatus === '卒業' || i.eduStatus === '入社').slice(0, 3)
+        ];
+    }
+    milestones.sort((a,b) => (a.year||0) - (b.year||0) || (a.month||0) - (b.month||0));
+
+    // Combined timeline
+    const combinedChronology = [...allHistory, ...allAchieve, ...allSkills].sort((a,b) => (a.year||0) - (b.year||0) || (a.month||0) - (b.month||0));
+
+    return `
+    <div class="storybook-container">
+      <!-- Storybook Sticky Screen Header (Hidden during print) -->
+      <div class="storybook-nav-header no-print">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button class="btn btn-secondary btn-sm" onclick="App.state.view='app'; App.render();">
+            ← ${(lang==='zh'?'返回編輯主頁':'アプリに戻る')}
+          </button>
+          <div>
+            <div style="font-weight:800; font-size:15px; color:#1e293b;">${this.t('storybookTitle')}</div>
+            <div style="font-size:11px; color:#64748b;">${(lang==='zh'?'典藏人生紀念冊・世代傳承典範':'人生の歩みとマイルストーンを綴る記念誌')}</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-primary btn-sm" onclick="window.print()" style="background:linear-gradient(135deg, #10b981, #059669); font-weight:700;">
+            🖨️ ${(lang==='zh'?'列印或另存為 PDF':'印刷 / PDF出力')}
+          </button>
+        </div>
+      </div>
+
+      <!-- STORYBOOK PAGE 1: COVER & LIFE CREED -->
+      <div class="storybook-page">
+        <div class="storybook-cover-card">
+          <div style="text-align:center; margin-bottom:18px;">
+            <div style="font-size:12px; font-weight:800; letter-spacing:4px; color:#047857; text-transform:uppercase; margin-bottom:8px;">MEMORIAL LIFE STORYBOOK</div>
+            <div style="font-size:32px; font-weight:900; letter-spacing:-0.03em; color:#0f172a;">${p.name} <span style="font-size:18px; font-weight:600; color:#64748b;">${(lang==='zh'?'人生典藏誌':'人生物語')}</span></div>
+            ${b.furigana ? `<div style="font-size:13px; color:#64748b; margin-top:2px;">${b.furigana}</div>` : ''}
+          </div>
+
+          <!-- Portrait & Primary Stats -->
+          <div style="display:flex; justify-content:center; align-items:center; gap:24px; margin:24px 0; flex-wrap:wrap;">
+            <div class="storybook-portrait-frame">
+              ${b.photo ? `<img src="${b.photo}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="font-size:48px; color:#cbd5e1;">👤</div>`}
+            </div>
+            <div style="min-width:240px;">
+              <div style="font-size:13px; color:#64748b; margin-bottom:4px;">${(lang==='zh'?'誕生年月日 / 生日':'生年月日')}</div>
+              <div style="font-size:16px; font-weight:800; color:#1e293b; margin-bottom:12px;">${b.birthday || (lang==='zh'?'未記載':'未登録')} ${age ? `(${age} ${this.t('ageSuffix')})` : ''}</div>
+              <div style="font-size:13px; color:#64748b; margin-bottom:4px;">${(lang==='zh'?'現住所 / 根基故鄉':'現住所')}</div>
+              <div style="font-size:14px; font-weight:600; color:#334155; margin-bottom:12px;">${b.address || (lang==='zh'?'未記載':'未登録')}</div>
+              <div style="font-size:13px; color:#64748b; margin-bottom:4px;">${(lang==='zh'?'編撰記錄日':'編纂記録日')}</div>
+              <div style="font-size:14px; font-weight:700; color:#047857;">${yyyy}年 ${mm}月 ${dd}日</div>
+            </div>
+          </div>
+
+          <!-- Life Motto Feature Box -->
+          <div class="storybook-motto-box">
+            <div style="font-size:11px; font-weight:800; letter-spacing:2px; color:#b45309; text-transform:uppercase; margin-bottom:8px;">
+              🌟 ${this.t('mottoLabel')} / LIFE MOTTO
+            </div>
+            <div style="font-size:20px; font-weight:800; color:#78350f; line-height:1.5; font-style:italic;">
+              “${b.motto || (lang==='zh'?'一步一腳印，無愧於心，堅持熱愛，溫暖人間。':'一歩一歩を誠実に。自らの信念に誇りを持ち、歩み続ける。')}”
+            </div>
+          </div>
+
+          <!-- Summary Highlights Grid -->
+          <div class="storybook-grid-3" style="margin-top:24px;">
+            <div class="storybook-stat-card">
+              <div style="font-size:26px; font-weight:900; color:#047857;">${allHistory.length}</div>
+              <div style="font-size:12px; font-weight:700; color:#475569;">${(lang==='zh'?'生涯經歷篇章':'歩んできた経歴')}</div>
+            </div>
+            <div class="storybook-stat-card">
+              <div style="font-size:26px; font-weight:900; color:#d97706;">${milestones.length}</div>
+              <div style="font-size:12px; font-weight:700; color:#475569;">${(lang==='zh'?'關鍵璀璨里程碑':'重要マイルストーン')}</div>
+            </div>
+            <div class="storybook-stat-card">
+              <div style="font-size:26px; font-weight:900; color:#2563eb;">${allSkills.length + allAchieve.length}</div>
+              <div style="font-size:12px; font-weight:700; color:#475569;">${(lang==='zh'?'專業榮耀與資產':'資格・実績資産')}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION: PIVOTAL MILESTONES -->
+        <div class="storybook-section">
+          <div class="storybook-section-title">
+            <span>⭐ ${(lang==='zh'?'第一章：人生關鍵里程碑 (Pivotal Milestones)':'第一章：人生の重要マイルストーン')}</span>
+          </div>
+          <p style="font-size:13px; color:#64748b; margin-bottom:18px;">${(lang==='zh'?'記錄生命轉折、重大突破、成家立業與刻骨銘心的輝煌篇章。':'人生の転機、大きな挑戦、決断と栄誉が詰まった軌跡です。')}</p>
+
+          ${milestones.length === 0 ? `<p style="text-align:center; color:#94a3b8; padding:30px;">${(lang==='zh'?'尚未標記關鍵里程碑，可在經歷或實績中勾選「關鍵里程碑」。':'マイルストーンが未登録です。経歴や実績の編集画面で「重要マイルストーン」にチェックを入れてください。')}</p>` : `
+          <div class="storybook-milestones-grid">
+            ${milestones.map(m => `
+              <div class="storybook-milestone-card">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                  <span class="tag" style="background:${m.color || '#f59e0b'}; font-size:11px; padding:3px 8px;">${m.catLabel || '里程碑'}</span>
+                  <span style="font-size:13px; font-weight:800; color:#b45309;">${m.year}年 ${m.month?m.month+'月':''}</span>
+                </div>
+                <div style="font-size:16px; font-weight:800; color:#1e293b; margin-bottom:6px;">${m.title} ${m.eduStatus?`[${m.eduStatus}]`:''}</div>
+                <div style="font-size:13px; color:#475569; line-height:1.5;">${m.desc || (lang==='zh'?'人生歲月中的輝煌成就與美好印記。':'かけがえのない人生の大切な節目。')}</div>
+                ${m.photo ? `<div style="margin-top:10px;"><img src="${m.photo}" style="width:100%; max-height:160px; object-fit:cover; border-radius:6px; border:1px solid #e2e8f0;"></div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+          `}
+        </div>
+      </div>
+
+      <!-- STORYBOOK PAGE 2: DETAILED CHRONOLOGY & ACHIEVEMENTS -->
+      <div class="storybook-page" style="break-before:page; page-break-before:always;">
+        <div class="storybook-section">
+          <div class="storybook-section-title">
+            <span>📜 ${(lang==='zh'?'第二章：生平軌跡與實績紀實 (Chronology & Legacy)':'第二章：生平軌跡と実績の歩み')}</span>
+          </div>
+          
+          <div style="margin-top:16px;">
+            ${combinedChronology.length === 0 ? `<p style="text-align:center; color:#94a3b8; padding:30px;">${(lang==='zh'?'尚無足夠記錄資料':'データがありません')}</p>` : combinedChronology.map(item => `
+              <div class="storybook-timeline-row">
+                <div class="storybook-time-badge">${item.year||'?'}年${item.month?item.month+'月':''}</div>
+                <div class="storybook-item-box ${item.isMilestone ? 'is-milestone' : ''}">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div style="font-weight:800; font-size:14.5px; color:#0f172a;">
+                      ${item.title} ${item.eduStatus?`[${item.eduStatus}]`:''}
+                      ${item.isMilestone ? ` <span class="milestone-badge" style="font-size:10px;">⭐ ${(lang==='zh'?'里程碑':'マイルストーン')}</span>` : ''}
+                    </div>
+                    <span class="tag" style="background:${item.color}; font-size:10.5px;">${item.catLabel}</span>
+                  </div>
+                  ${item.desc ? `<div style="font-size:12.5px; color:#475569; line-height:1.45; margin-top:4px;">${item.desc}</div>` : ''}
+                  ${item.photo ? `<img src="${item.photo}" style="max-height:110px; border-radius:6px; margin-top:8px; border:1px solid #cbd5e1;">` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- SECTION: LIFE REFLECTIONS & WORDS TO FAMILY -->
+        <div class="storybook-section" style="margin-top:32px;">
+          <div class="storybook-section-title">
+            <span>💌 ${(lang==='zh'?'第三章：世代傳承的叮嚀與人生感悟 (Words to Future Generations)':'第三章：世代を繋ぐメッセージと信条')}</span>
+          </div>
+
+          <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:18px; margin-top:16px;">
+            <div style="font-size:12px; font-weight:800; color:#b45309; margin-bottom:6px;">${(lang==='zh'?'自我淬礪與核心價值觀':'自己PR・信念・アピール')}</div>
+            <div style="font-size:14px; color:#78350f; line-height:1.6; white-space:pre-wrap;">${b.motivation || (lang==='zh'?'不忘初心，砥礪前行。珍惜身邊的人，勇敢追求理想。':'初心を忘れず、日々誠実に。支えてくれた人々への感謝を胸に歩みます。')}</div>
+          </div>
+
+          ${b.desiredConditions ? `
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:18px; margin-top:14px;">
+            <div style="font-size:12px; font-weight:800; color:#475569; margin-bottom:6px;">${(lang==='zh'?'人生遠景與堅持條件':'将来のビジョンと希望')}</div>
+            <div style="font-size:13.5px; color:#334155; line-height:1.5; white-space:pre-wrap;">${b.desiredConditions}</div>
+          </div>
+          ` : ''}
+
+          ${p.blessingLetter ? `
+          <div style="background:linear-gradient(135deg, #f0fdf4, #dcfce7); border:1.5px solid #86efac; border-radius:10px; padding:18px; margin-top:16px;">
+            <div style="font-size:12.5px; font-weight:800; color:#15803d; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+              <span style="font-size:18px;">🕊️</span> ${(lang==='zh'?'世代傳承的祝福・父母親筆成年寄語 (Parents’ Blessing Letter)':'世代継承の祝福・両親からの親筆成人メッセージ')}
+            </div>
+            <div style="font-size:14.5px; font-weight:700; color:#166534; line-height:1.7; font-style:italic; white-space:pre-wrap; background:rgba(255,255,255,0.7); padding:14px; border-radius:8px; border-left:4px solid #16a34a;">“${p.blessingLetter}”</div>
+            <div style="font-size:11.5px; font-weight:700; color:#15803d; text-align:right; margin-top:8px;">— ${(lang==='zh'?'父母親手鋪設的成長起點與叮嚀':'誕生から巣立ちまで、深い愛情を込めて')}</div>
+          </div>
+          ` : ''}
+
+          <!-- Diary Excerpts (Philosophical Quotes) -->
+          ${allDiary.length > 0 ? `
+          <div style="margin-top:20px;">
+            <div style="font-size:13px; font-weight:800; color:#334155; margin-bottom:10px;">📔 ${(lang==='zh'?'精選人生備忘與座右語錄':'日々の思索と心に残る言葉')}</div>
+            <div class="grid-2">
+              ${allDiary.slice(0, 4).map(d => `
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:12px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+                  <div style="font-size:11px; font-weight:700; color:#047857; margin-bottom:4px;">${d.date}</div>
+                  <div style="font-size:13px; color:#1e293b; line-height:1.45; white-space:pre-wrap;">${d.title}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- Signature & Keepsake Endorsement -->
+          <div class="storybook-signature-block">
+            <div style="font-size:12px; color:#64748b; line-height:1.6;">
+              ${(lang==='zh'?'本紀念誌由本人親自審閱確認，記載生平歷程、奮鬥實績與家族期望，願為世代子孫立言立德之長久典範。':'本書は本人の歩んだ真実の軌跡であり、次世代へ受け継がれるべき貴重な人生の記録です。')}
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:24px; padding-top:16px; border-top:1px solid #cbd5e1;">
+              <div>
+                <span style="font-size:12px; color:#64748b;">${(lang==='zh'?'記錄日期':'作成年月日')}: </span>
+                <span style="font-size:14px; font-weight:700;">${yyyy}年 ${mm}月 ${dd}日</span>
+              </div>
+              <div style="min-width:180px; text-align:right;">
+                <span style="font-size:12px; color:#64748b;">${(lang==='zh'?'親筆署名':'署名')}: </span>
+                <span style="font-size:18px; font-weight:800; letter-spacing:2px; text-decoration:underline;">${p.name}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    `;
   }
 };
 window.onload = () => App.init();

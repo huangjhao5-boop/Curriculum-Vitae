@@ -1,0 +1,16 @@
+{
+  "name": "curriculum-vitae",
+  "version": "3.0.0",
+  "description": "父母守護的成長起點 ✕ 世代交接獨立接棒 ✕ Google Gemini AI 動態技能樹 ✕ 厚生労働省 JIS 最新規格準拠",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo 'Build complete'"
+  },
+  "dependencies": {
+    "@google/genai": "latest",
+    "express": "^4.21.2"
+  }
+}
